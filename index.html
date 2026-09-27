@@ -7,7 +7,16 @@
   
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.525.0/dist/umd/lucide.js"></script>
+
+  <!-- ============================================================
+       FIREBASE SDKs (compat build — plays nicely with this file's
+       plain <script> + onclick style, no bundler/module step needed)
+       Docs: https://firebase.google.com/docs/web/setup
+       ============================================================ -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
   
   <script>
     tailwind.config = {
@@ -43,7 +52,52 @@
     }
   </style>
 </head>
-<body class="bg-gray-100 text-gray-900 dark:bg-slate-900 dark:text-gray-100 min-h-screen flex flex-col md:flex-row transition-colors duration-200">
+<body class="bg-gray-100 text-gray-900 dark:bg-slate-900 dark:text-gray-100 min-h-screen transition-colors duration-200">
+
+  <!-- ============================================================
+       AUTH SCREEN (PLACEHOLDER)
+       Shown when there is no signed-in Firebase user. In local demo
+       mode (no real firebaseConfig yet) this screen is skipped and
+       a demo "admin" session is used instead — see initAuth().
+       ============================================================ -->
+  <div id="authScreen" class="min-h-screen w-full flex items-center justify-center bg-slate-900 p-4">
+    <div class="w-full max-w-sm bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 p-6 space-y-4 text-white">
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-gradient-to-tr from-sky-600 to-orange-500 rounded-lg shadow-lg">
+          <i data-lucide="thermometer-snowflake" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-none tracking-tight">HVAC Pro</h1>
+          <span class="text-xs text-sky-400 font-medium">Field Companion</span>
+        </div>
+      </div>
+
+      <div id="demoModeNotice" class="hidden p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs text-amber-300 leading-relaxed">
+        Firebase isn't configured yet, so this screen is a placeholder preview. Add your project config to <code class="font-mono">firebaseConfig</code> near the top of the script to enable real sign-in.
+      </div>
+
+      <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold mb-1">Email</label>
+          <input type="email" id="authEmail" required autocomplete="username" placeholder="tech@company.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1">Password</label>
+          <input type="password" id="authPassword" required autocomplete="current-password" placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+        </div>
+        <div id="authError" class="hidden text-xs text-red-400"></div>
+        <button type="submit" id="authSubmitBtn" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 rounded-lg font-bold text-sm transition-colors">Sign In</button>
+      </form>
+      <button type="button" onclick="toggleAuthMode()" id="authToggleModeBtn" class="w-full text-center text-xs text-sky-400 hover:underline">Need an account? Sign up</button>
+      <p class="text-[10px] text-gray-500 text-center leading-relaxed">New accounts are created with the <strong>Technician</strong> role by default. An existing Admin can promote teammates from Team &amp; Roles.</p>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       APP SHELL — hidden until a user is authenticated (or, in
+       local demo mode, immediately shown as a stand-in admin).
+       ============================================================ -->
+  <div id="appShell" class="hidden w-full min-h-screen flex-col md:flex-row flex">
 
   <!-- Sidebar for Desktop, Bottom Bar for Mobile -->
   <aside class="w-full md:w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col justify-between p-4 z-20 md:min-h-screen">
@@ -63,6 +117,22 @@
         </button>
       </div>
 
+      <!-- Demo Mode Banner (only shown when firebaseConfig is still a placeholder) -->
+      <div id="demoModeBanner" class="hidden mb-4 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-[11px] text-amber-300 leading-snug">
+        ⚠ Local demo mode — Firebase isn't connected. Data lives in this browser only.
+      </div>
+
+      <!-- Signed-in User / Role Badge -->
+      <div class="mb-4 p-3 bg-slate-800/80 rounded-xl border border-slate-700/50 text-xs flex items-center justify-between">
+        <div class="min-w-0">
+          <div id="sidebarUserEmail" class="font-semibold truncate">—</div>
+          <span id="sidebarUserRole" class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-sky-500/20 text-sky-400">role</span>
+        </div>
+        <button onclick="handleSignOut()" title="Sign out" class="p-2 rounded-lg bg-slate-700 hover:bg-red-600 text-gray-300 hover:text-white transition-colors flex-shrink-0">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+        </button>
+      </div>
+
       <!-- Quick Status Widget in Sidebar -->
       <div id="sidebarClockStatus" class="mb-6 p-3 bg-slate-800/80 rounded-xl border border-slate-700/50 text-xs">
         <div class="flex items-center justify-between text-gray-400 mb-1">
@@ -74,27 +144,30 @@
 
       <!-- Navigation Links -->
       <nav class="space-y-1">
-        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors bg-sky-600 text-white">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" data-tab="dashboard" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors bg-sky-600 text-white">
           <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
         </button>
-        <button onclick="switchTab('tracker')" id="nav-tracker" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-slate-800 transition-colors">
+        <button onclick="switchTab('tracker')" id="nav-tracker" data-tab="tracker" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-slate-800 transition-colors">
           <i data-lucide="clock" class="w-4 h-4"></i> Time & GPS Drive
         </button>
-        <button onclick="switchTab('customers')" id="nav-customers" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-slate-800 transition-colors">
+        <button onclick="switchTab('customers')" id="nav-customers" data-tab="customers" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-slate-800 transition-colors">
           <i data-lucide="users" class="w-4 h-4"></i> Customers & Jobs
         </button>
-        <button onclick="switchTab('invoices')" id="nav-invoices" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-slate-800 transition-colors">
+        <button onclick="switchTab('invoices')" id="nav-invoices" data-tab="invoices" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-slate-800 transition-colors">
           <i data-lucide="receipt" class="w-4 h-4"></i> Invoices & QB Sync
         </button>
-        <button onclick="switchTab('calculator')" id="nav-calculator" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-slate-800 transition-colors">
+        <button onclick="switchTab('calculator')" id="nav-calculator" data-tab="calculator" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-slate-800 transition-colors">
           <i data-lucide="gauge" class="w-4 h-4"></i> HVAC PT & Diagnostic
+        </button>
+        <button onclick="switchTab('users')" id="nav-users" data-tab="users" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-slate-800 transition-colors">
+          <i data-lucide="shield" class="w-4 h-4"></i> Team & Roles
         </button>
       </nav>
     </div>
 
     <!-- Dark Mode & Settings Footer -->
     <div class="hidden md:flex flex-col gap-2 pt-4 border-t border-slate-800">
-      <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-gray-400 hover:bg-slate-800">
+      <button onclick="switchTab('settings')" id="nav-settings" data-tab="settings" class="nav-btn w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-gray-400 hover:bg-slate-800">
         <i data-lucide="settings" class="w-4 h-4"></i> Settings & Backup
       </button>
       <button id="themeToggleDesktop" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-gray-400 hover:bg-slate-800">
@@ -539,7 +612,40 @@
       </div>
     </section>
 
+    <!-- TEAM & ROLES VIEW (Admin only) -->
+    <section id="view-users" class="space-y-6 hidden">
+      <div>
+        <h2 class="text-2xl font-bold tracking-tight">Team & Roles</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Role-based access control — Admin, Dispatcher, Technician</p>
+      </div>
+
+      <div class="p-4 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 text-xs text-gray-500 dark:text-gray-400 space-y-1">
+        <p><strong class="text-sky-500">Admin</strong> — full access: dashboard, time tracking, customers/jobs, invoices & QB sync, diagnostics, settings, and this team page.</p>
+        <p><strong class="text-orange-500">Dispatcher</strong> — dashboard, time tracking, customers/jobs, invoices & QB sync, diagnostics. Can assign jobs to technicians.</p>
+        <p><strong class="text-emerald-500">Technician</strong> — dashboard, time tracking, customers/jobs, diagnostics. Only sees jobs & time logs assigned to them; no invoicing or settings access.</p>
+      </div>
+
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 p-5">
+        <h3 class="font-bold text-lg mb-4">Teammates</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="text-xs text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-slate-700/50">
+              <tr>
+                <th class="px-4 py-3 rounded-l-lg">Email</th>
+                <th class="px-4 py-3">Role</th>
+                <th class="px-4 py-3 rounded-r-lg">Notes</th>
+              </tr>
+            </thead>
+            <tbody id="usersTable" class="divide-y divide-gray-100 dark:divide-slate-700">
+              <!-- Dynamically Populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
   </main>
+  </div> <!-- /#appShell -->
 
   <!-- MODAL: ADD/EDIT CUSTOMER -->
   <div id="modalCustomer" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
@@ -620,6 +726,13 @@
           <label class="block font-semibold mb-1">Field Diagnostic Notes</label>
           <textarea id="jobNotes" rows="3" placeholder="Replaced dual run capacitor 45/5 MFD..." class="w-full bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-2"></textarea>
         </div>
+        <!-- Role-gated: only Admin/Dispatcher can assign a job to a technician; Technicians auto-assign themselves -->
+        <div id="jobAssignTechWrapper" class="hidden">
+          <label class="block font-semibold mb-1">Assign Technician</label>
+          <select id="jobAssignedTech" class="w-full bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-2">
+            <option value="">-- Unassigned --</option>
+          </select>
+        </div>
         <div>
           <label class="block font-semibold mb-1">Attach Photo (Equipment Tag / Before-After)</label>
           <input type="file" id="jobPhotoInput" accept="image/*" onchange="previewPhoto(event)" class="w-full bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-1.5 text-xs">
@@ -636,6 +749,93 @@
   </div>
 
   <script>
+    // ============================================================
+    // FIREBASE CONFIGURATION — PLACEHOLDER
+    // ============================================================
+    // 1. Create a project at https://console.firebase.google.com
+    // 2. Project settings > General > "Your apps" > Web app — copy the config below.
+    // 3. Authentication > Sign-in method > enable "Email/Password" (or swap in
+    //    Google/Microsoft sign-in and adjust handleAuthSubmit()).
+    // 4. Build > Firestore Database > create a database (start in production mode).
+    // 5. Bootstrap your first Admin: sign up normally in the app (you'll land as
+    //    "technician" by default), then in the Firestore console open
+    //    users/{your-uid} and change role to "admin" by hand. After that, admins
+    //    can promote teammates from the in-app Team & Roles screen.
+    //
+    // Suggested Firestore Security Rules (adapt to your needs):
+    //   function role() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role; }
+    //   match /users/{uid} {
+    //     allow read: if request.auth != null;
+    //     allow write: if request.auth.uid == uid || role() == 'admin';
+    //   }
+    //   match /customers/{id} {
+    //     allow read, write: if request.auth != null; // tighten as needed
+    //   }
+    //   match /jobs/{id} {
+    //     allow read: if request.auth != null &&
+    //       (role() in ['admin','dispatcher'] || resource.data.assignedTechId == request.auth.uid);
+    //     allow write: if request.auth != null &&
+    //       (role() in ['admin','dispatcher'] || request.resource.data.assignedTechId == request.auth.uid);
+    //   }
+    //   match /invoices/{id} {
+    //     allow read, write: if request.auth != null && role() in ['admin','dispatcher'];
+    //   }
+    //   match /timeLogs/{id} {
+    //     allow read, write: if request.auth != null &&
+    //       (role() in ['admin','dispatcher'] || resource.data.techId == request.auth.uid);
+    //   }
+    //   match /activeShifts/{uid} {
+    //     allow read, write: if request.auth.uid == uid || role() in ['admin','dispatcher'];
+    //   }
+    // ============================================================
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // True once someone has swapped in a real config. Until then the app runs
+    // in local demo mode: auto "signed in" as an admin, data kept in localStorage.
+    const FIREBASE_CONFIGURED = firebaseConfig.apiKey !== "YOUR_API_KEY";
+
+    let auth = null;
+    let db = null;
+    if (FIREBASE_CONFIGURED) {
+      firebase.initializeApp(firebaseConfig);
+      auth = firebase.auth();
+      db = firebase.firestore();
+      db.enablePersistence().catch(err => console.warn('Firestore offline persistence unavailable:', err.code));
+    }
+
+    // ============================================================
+    // ROLE-BASED PERMISSIONS — PLACEHOLDER
+    // ============================================================
+    // A user's role lives in Firestore at users/{uid}.role. It gates which
+    // nav tabs are visible (applyRolePermissions) AND which documents get
+    // fetched (subscribeToFirestoreCollections) — treat the client-side gate
+    // as a UX convenience only; the Firestore security rules above are what
+    // actually enforce it.
+    const ROLES = {
+      ADMIN: 'admin',
+      DISPATCHER: 'dispatcher',
+      TECHNICIAN: 'technician'
+    };
+
+    const ROLE_NAV_ACCESS = {
+      [ROLES.ADMIN]:      ['dashboard', 'tracker', 'customers', 'invoices', 'calculator', 'users', 'settings'],
+      [ROLES.DISPATCHER]: ['dashboard', 'tracker', 'customers', 'invoices', 'calculator'],
+      [ROLES.TECHNICIAN]: ['dashboard', 'tracker', 'customers', 'calculator']
+    };
+
+    let currentUser = null;   // { uid, email } — Firebase Auth user (or demo stand-in)
+    let currentRole = null;   // one of ROLES
+    let allUsers = [];        // populated for Admins on the Team & Roles screen
+    let authMode = 'signin';  // 'signin' | 'signup'
+    let activeListeners = []; // Firestore onSnapshot unsubscribe functions
+
     // --- APP STATE & STORAGE ---
     const STORAGE_KEYS = {
       CUSTOMERS: 'hvac_customers_v1',
@@ -661,29 +861,199 @@
     // --- INITIALIZATION ---
     window.onload = function() {
       lucide.createIcons();
+      initAuth();
+    };
+
+    // ============================================================
+    // AUTH — PLACEHOLDER
+    // ============================================================
+    function initAuth() {
+      if (!FIREBASE_CONFIGURED) {
+        // Local demo mode: skip real auth entirely and act as a demo Admin
+        // so every view/role can still be previewed and clicked through.
+        currentUser = { uid: 'demo-admin', email: 'demo@local (no Firebase configured)' };
+        currentRole = ROLES.ADMIN;
+        document.getElementById('demoModeBanner').classList.remove('hidden');
+        enterApp();
+        return;
+      }
+
+      auth.onAuthStateChanged(async (user) => {
+        unsubscribeAll();
+        if (user) {
+          currentUser = user;
+          currentRole = await fetchUserRole(user.uid);
+          enterApp();
+        } else {
+          currentUser = null;
+          currentRole = null;
+          showAuthScreen();
+        }
+      });
+    }
+
+    async function fetchUserRole(uid) {
+      // PLACEHOLDER: reads (or creates, on first login) users/{uid} in Firestore.
+      const docRef = db.collection('users').doc(uid);
+      const snap = await docRef.get();
+      if (snap.exists) return snap.data().role || ROLES.TECHNICIAN;
+
+      await docRef.set({
+        email: currentUser.email,
+        role: ROLES.TECHNICIAN, // default role for new sign-ups — promote via Team & Roles
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      return ROLES.TECHNICIAN;
+    }
+
+    function toggleAuthMode() {
+      authMode = authMode === 'signin' ? 'signup' : 'signin';
+      document.getElementById('authSubmitBtn').textContent = authMode === 'signin' ? 'Sign In' : 'Create Account';
+      document.getElementById('authToggleModeBtn').textContent = authMode === 'signin'
+        ? 'Need an account? Sign up'
+        : 'Already have an account? Sign in';
+    }
+
+    function handleAuthSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('authEmail').value;
+      const password = document.getElementById('authPassword').value;
+      const errorEl = document.getElementById('authError');
+      errorEl.classList.add('hidden');
+
+      const action = authMode === 'signin'
+        ? auth.signInWithEmailAndPassword(email, password)
+        : auth.createUserWithEmailAndPassword(email, password);
+
+      action.catch(err => {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+      });
+    }
+
+    function handleSignOut() {
+      unsubscribeAll();
+      if (FIREBASE_CONFIGURED) {
+        auth.signOut();
+      } else {
+        location.reload(); // demo mode has no real session to end
+      }
+    }
+
+    function showAuthScreen() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      document.getElementById('appShell').classList.add('hidden');
+      document.getElementById('authScreen').classList.remove('hidden');
+      if (!FIREBASE_CONFIGURED) document.getElementById('demoModeNotice').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function enterApp() {
+      document.getElementById('authScreen').classList.add('hidden');
+      document.getElementById('appShell').classList.remove('hidden');
+      document.getElementById('sidebarUserEmail').textContent = currentUser.email;
+      document.getElementById('sidebarUserRole').textContent = currentRole;
+      applyRolePermissions();
+      lucide.createIcons();
       loadStoredData();
       initTheme();
       updateTimerUI();
-      renderAll();
+      switchTab('dashboard');
+      if (!timerInterval) timerInterval = setInterval(updateTimerUI, 1000);
+    }
 
-      // Start global timer check tick
-      timerInterval = setInterval(updateTimerUI, 1000);
-    };
+    function applyRolePermissions() {
+      const allowed = ROLE_NAV_ACCESS[currentRole] || [];
+      document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
+        btn.classList.toggle('hidden', !allowed.includes(btn.dataset.tab));
+      });
+      // Only Admin/Dispatcher can assign jobs to a technician; others self-assign.
+      const canAssign = currentRole === ROLES.ADMIN || currentRole === ROLES.DISPATCHER;
+      const wrapper = document.getElementById('jobAssignTechWrapper');
+      if (wrapper) wrapper.classList.toggle('hidden', !canAssign);
+    }
 
+    function unsubscribeAll() {
+      activeListeners.forEach(unsub => { try { unsub(); } catch (e) {} });
+      activeListeners = [];
+    }
+
+    // ============================================================
+    // DATA LOADING — Firestore when configured, localStorage fallback
+    // ============================================================
     function loadStoredData() {
+      if (FIREBASE_CONFIGURED) {
+        subscribeToFirestoreCollections();
+        return;
+      }
+
       customers = JSON.parse(localStorage.getItem(STORAGE_KEYS.CUSTOMERS)) || [];
       jobs = JSON.parse(localStorage.getItem(STORAGE_KEYS.JOBS)) || [];
       invoices = JSON.parse(localStorage.getItem(STORAGE_KEYS.INVOICES)) || [];
       timeLogs = JSON.parse(localStorage.getItem(STORAGE_KEYS.TIME_LOGS)) || [];
       activeShift = JSON.parse(localStorage.getItem(STORAGE_KEYS.SHIFT_STATE)) || { state: 'CLOCK_OUT', startTime: null, jobId: null };
 
-      // Seed if empty
       if (customers.length === 0 && jobs.length === 0) {
         seedDemoData();
       }
+      renderAll();
     }
 
-    function saveData() {
+    // PLACEHOLDER: real-time Firestore listeners, scoped by role.
+    // Technicians only ever receive jobs/time logs assigned to them; the
+    // security rules above are what actually enforce this server-side.
+    function subscribeToFirestoreCollections() {
+      unsubscribeAll();
+
+      let jobsQuery = db.collection('jobs');
+      if (currentRole === ROLES.TECHNICIAN) {
+        jobsQuery = jobsQuery.where('assignedTechId', '==', currentUser.uid);
+      }
+      activeListeners.push(jobsQuery.onSnapshot(snap => {
+        jobs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderAll();
+      }, err => console.error('jobs listener error:', err)));
+
+      activeListeners.push(db.collection('customers').onSnapshot(snap => {
+        customers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderAll();
+      }, err => console.error('customers listener error:', err)));
+
+      if (ROLE_NAV_ACCESS[currentRole].includes('invoices')) {
+        activeListeners.push(db.collection('invoices').onSnapshot(snap => {
+          invoices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          renderAll();
+        }, err => console.error('invoices listener error:', err)));
+      }
+
+      let logsQuery = db.collection('timeLogs');
+      if (currentRole === ROLES.TECHNICIAN) {
+        logsQuery = logsQuery.where('techId', '==', currentUser.uid);
+      }
+      activeListeners.push(logsQuery.onSnapshot(snap => {
+        timeLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderAll();
+      }, err => console.error('timeLogs listener error:', err)));
+
+      activeListeners.push(db.collection('activeShifts').doc(currentUser.uid).onSnapshot(docSnap => {
+        activeShift = docSnap.exists ? docSnap.data() : { state: 'CLOCK_OUT', startTime: null, jobId: null };
+        updateTimerUI();
+      }, err => console.error('activeShift listener error:', err)));
+
+      if (currentRole === ROLES.ADMIN || currentRole === ROLES.DISPATCHER) {
+        activeListeners.push(db.collection('users').onSnapshot(snap => {
+          allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+          renderUsersView();
+          populateJobSelects();
+        }, err => console.error('users listener error:', err)));
+      }
+    }
+
+    // Local-demo-mode persistence only. Firestore mode writes per-document
+    // instead (see handleSaveCustomer, handleSaveJob, setShiftState, etc.)
+    // and relies on the onSnapshot listeners above to refresh the UI.
+    function saveLocalData() {
       localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
       localStorage.setItem(STORAGE_KEYS.JOBS, JSON.stringify(jobs));
       localStorage.setItem(STORAGE_KEYS.INVOICES, JSON.stringify(invoices));
@@ -692,31 +1062,98 @@
       renderAll();
     }
 
+    // ============================================================
+    // TEAM & ROLES VIEW (Admin) — PLACEHOLDER
+    // ============================================================
+    function renderUsersView() {
+      const tbody = document.getElementById('usersTable');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      if (!FIREBASE_CONFIGURED) {
+        tbody.innerHTML = `<tr><td colspan="3" class="px-4 py-3 text-center text-gray-400">Connect Firebase to manage real teammates. In local demo mode you're the only "user".</td></tr>`;
+        return;
+      }
+
+      if (allUsers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" class="px-4 py-3 text-center text-gray-400">No teammates yet — invite them to sign up in the app.</td></tr>`;
+        return;
+      }
+
+      allUsers.forEach(u => {
+        const canEdit = currentRole === ROLES.ADMIN;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="px-4 py-3 font-medium">${u.email}</td>
+          <td class="px-4 py-3">
+            <select data-uid="${u.uid}" onchange="updateUserRole(this)" ${canEdit ? '' : 'disabled'} class="bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-1.5 text-xs disabled:opacity-50">
+              <option value="technician" ${u.role === 'technician' ? 'selected' : ''}>Technician</option>
+              <option value="dispatcher" ${u.role === 'dispatcher' ? 'selected' : ''}>Dispatcher</option>
+              <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+            </select>
+          </td>
+          <td class="px-4 py-3 text-xs text-gray-400">${u.uid === currentUser.uid ? '(you)' : ''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateUserRole(selectEl) {
+      const uid = selectEl.dataset.uid;
+      const newRole = selectEl.value;
+      db.collection('users').doc(uid).update({ role: newRole }).catch(err => {
+        console.error('Failed to update role:', err);
+        alert('Could not update role — check Firestore security rules.');
+      });
+    }
+
     // --- SEED DEMO DATA ---
     function seedDemoData() {
-      customers = [
+      const sampleCustomers = [
         { id: 'c1', name: 'Robert Vance', phone: '(555) 234-5678', address: '742 Evergreen Terrace', equipment: 'Carrier 3.5-Ton Heat Pump', refrigerant: 'R-410A' },
         { id: 'c2', name: 'Apex Commercial Plaza', phone: '(555) 987-6543', address: '100 Main St, Suite 400', equipment: 'Trane Rooftop Package Unit', refrigerant: 'R-410A' }
       ];
 
-      jobs = [
+      const sampleJobs = [
         { id: 'j1', customerId: 'c1', title: 'A/C Not Cooling - High Superheat', status: 'In Progress', serialTag: 'SN-49201948', notes: 'Checked pressures. Low side at 95 PSIG. Outdoor fan operating normally.', photo: '', date: new Date().toISOString() },
         { id: 'j2', customerId: 'c2', title: 'Seasonal Preventive Maintenance', status: 'Scheduled', serialTag: 'SN-8830123', notes: 'Replace 20x25x2 filters and inspect belts.', photo: '', date: new Date().toISOString() }
       ];
 
-      invoices = [
+      const sampleInvoices = [
         { id: 'inv-1001', customerId: 'c1', jobId: 'j1', amount: 285.00, date: new Date().toLocaleDateString(), qbSynced: true, qbId: 'QB-94812' }
       ];
 
-      timeLogs = [
+      const sampleTimeLogs = [
         { id: 't1', type: 'DRIVE_TO_JOB', startTime: new Date(Date.now() - 7200000).toISOString(), endTime: new Date(Date.now() - 5400000).toISOString(), durationSec: 1800, jobId: 'j1' },
         { id: 't2', type: 'ON_JOB', startTime: new Date(Date.now() - 5400000).toISOString(), endTime: new Date(Date.now() - 1800000).toISOString(), durationSec: 3600, jobId: 'j1' }
       ];
 
-      saveData();
+      if (FIREBASE_CONFIGURED) {
+        // Seed straight into Firestore, tagged to whoever is signed in.
+        const batch = db.batch();
+        sampleCustomers.forEach(c => batch.set(db.collection('customers').doc(c.id), c));
+        sampleJobs.forEach(j => batch.set(db.collection('jobs').doc(j.id), { ...j, assignedTechId: currentUser.uid }));
+        sampleInvoices.forEach(i => batch.set(db.collection('invoices').doc(i.id), i));
+        sampleTimeLogs.forEach(t => batch.set(db.collection('timeLogs').doc(t.id), { ...t, techId: currentUser.uid }));
+        batch.commit().catch(err => {
+          console.error('Seeding Firestore failed:', err);
+          alert('Could not seed sample data — check Firestore security rules.');
+        });
+      } else {
+        customers = sampleCustomers;
+        jobs = sampleJobs;
+        invoices = sampleInvoices;
+        timeLogs = sampleTimeLogs;
+        saveLocalData();
+      }
     }
 
     function clearAllData() {
+      if (FIREBASE_CONFIGURED) {
+        alert('This clears only your local offline cache. To delete cloud data, remove the documents in the Firestore console (or wire up an admin-only cleanup Cloud Function).');
+        localStorage.clear();
+        return;
+      }
       if (confirm('Are you sure you want to clear all app data?')) {
         localStorage.clear();
         location.reload();
@@ -725,6 +1162,9 @@
 
     // --- TAB NAVIGATION ---
     function switchTab(tabId) {
+      const allowed = ROLE_NAV_ACCESS[currentRole] || [];
+      if (!allowed.includes(tabId)) return; // role-based permission guard
+
       document.querySelectorAll('main > section').forEach(el => el.classList.add('hidden'));
       document.getElementById(`view-${tabId}`).classList.remove('hidden');
 
@@ -750,14 +1190,20 @@
         const endMs = new Date(now).getTime();
         const durationSec = Math.floor((endMs - startMs) / 1000);
 
-        timeLogs.unshift({
-          id: 'tl-' + Date.now(),
+        const logEntry = {
           type: activeShift.state,
           startTime: activeShift.startTime,
           endTime: now,
           durationSec: durationSec,
-          jobId: activeShift.jobId || ''
-        });
+          jobId: activeShift.jobId || '',
+          techId: currentUser.uid
+        };
+
+        if (FIREBASE_CONFIGURED) {
+          db.collection('timeLogs').add(logEntry).catch(err => console.error('Failed to save time log:', err));
+        } else {
+          timeLogs.unshift({ id: 'tl-' + Date.now(), ...logEntry });
+        }
       }
 
       if (newState === 'CLOCK_OUT') {
@@ -770,7 +1216,14 @@
         };
       }
 
-      saveData();
+      if (FIREBASE_CONFIGURED) {
+        // PLACEHOLDER: persisting per-user so the active shift stays in sync
+        // if the technician switches devices mid-shift.
+        db.collection('activeShifts').doc(currentUser.uid).set(activeShift)
+          .catch(err => console.error('Failed to save shift state:', err));
+      } else {
+        saveLocalData();
+      }
       updateTimerUI();
     }
 
@@ -1017,17 +1470,30 @@
       btn.disabled = true;
 
       setTimeout(() => {
-        inv.qbSynced = true;
-        inv.qbId = 'QB-' + Math.floor(10000 + Math.random() * 90000);
-        saveData();
-        alert(`Successfully synced Invoice ${inv.id} to QuickBooks Online!\nAssigned QB Reference ID: ${inv.qbId}`);
+        const qbId = 'QB-' + Math.floor(10000 + Math.random() * 90000);
+        if (FIREBASE_CONFIGURED) {
+          db.collection('invoices').doc(invoiceId).update({ qbSynced: true, qbId })
+            .catch(err => console.error('Failed to sync invoice:', err));
+        } else {
+          inv.qbSynced = true;
+          inv.qbId = qbId;
+          saveLocalData();
+        }
+        alert(`Successfully synced Invoice ${inv.id} to QuickBooks Online!\nAssigned QB Reference ID: ${qbId}`);
       }, 1200);
+    }
+
+    function openNewInvoiceModal() {
+      // PLACEHOLDER: build a proper invoice form; for now this documents the
+      // shape a new Firestore "invoices" document should have.
+      alert('Invoice creation UI is a placeholder.\nWire this up to add a document like:\n{ customerId, jobId, amount, date, qbSynced: false }\nto the "invoices" collection in Firestore.');
     }
 
     function populateJobSelects() {
       const trackerSelect = document.getElementById('timeTrackerJobSelect');
       const modalSelect = document.getElementById('jobCustomerId');
-      
+      const techSelect = document.getElementById('jobAssignedTech');
+
       if (trackerSelect) {
         trackerSelect.innerHTML = '<option value="">-- Select Active Job --</option>';
         jobs.forEach(j => {
@@ -1041,25 +1507,42 @@
           modalSelect.innerHTML += `<option value="${c.id}">${c.name} (${c.address})</option>`;
         });
       }
+
+      // Technician assignment dropdown — only meaningful once Firebase is
+      // connected and the `users` collection has role data to filter on.
+      if (techSelect) {
+        techSelect.innerHTML = '<option value="">-- Unassigned --</option>';
+        allUsers.filter(u => u.role === ROLES.TECHNICIAN).forEach(u => {
+          techSelect.innerHTML += `<option value="${u.uid}">${u.email}</option>`;
+        });
+      }
     }
 
     // --- MODAL HANDLERS ---
     function openCustomerModal() { document.getElementById('modalCustomer').classList.remove('hidden'); }
-    function openNewJobModal() { populateJobSelects(); document.getElementById('modalJob').classList.remove('hidden'); }
+    function openNewJobModal() {
+      populateJobSelects();
+      document.getElementById('modalJob').classList.remove('hidden');
+    }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
     function handleSaveCustomer(e) {
       e.preventDefault();
       const newCust = {
-        id: 'c-' + Date.now(),
         name: document.getElementById('custName').value,
         phone: document.getElementById('custPhone').value,
         address: document.getElementById('custAddress').value,
         equipment: document.getElementById('custEquip').value,
-        refrigerant: document.getElementById('custRefrig').value
+        refrigerant: document.getElementById('custRefrig').value,
+        createdBy: currentUser.uid
       };
-      customers.push(newCust);
-      saveData();
+
+      if (FIREBASE_CONFIGURED) {
+        db.collection('customers').add(newCust).catch(err => console.error('Failed to save customer:', err));
+      } else {
+        customers.push({ id: 'c-' + Date.now(), ...newCust });
+        saveLocalData();
+      }
       closeModal('modalCustomer');
       document.getElementById('formCustomer').reset();
     }
@@ -1069,6 +1552,10 @@
       if (file) {
         const reader = new FileReader();
         reader.onload = function(evt) {
+          // NOTE: this stores the photo as a base64 string. That's fine for
+          // localStorage demo mode, but Firestore documents cap out at 1MB —
+          // for production, upload to Firebase Storage instead and save the
+          // resulting download URL on the job document.
           tempPhotoBase64 = evt.target.result;
           document.getElementById('photoPreview').src = tempPhotoBase64;
           document.getElementById('photoPreviewContainer').classList.remove('hidden');
@@ -1079,19 +1566,30 @@
 
     function handleSaveJob(e) {
       e.preventDefault();
+      const canAssign = currentRole === ROLES.ADMIN || currentRole === ROLES.DISPATCHER;
+      const assignedTechId = canAssign
+        ? (document.getElementById('jobAssignedTech').value || '')
+        : currentUser.uid; // technicians assign jobs to themselves
+
       const newJob = {
-        id: 'j-' + Date.now(),
         customerId: document.getElementById('jobCustomerId').value,
         title: document.getElementById('jobTitle').value,
         status: document.getElementById('jobStatus').value,
         serialTag: document.getElementById('jobSerialTag').value,
         notes: document.getElementById('jobNotes').value,
         photo: tempPhotoBase64 || '',
+        assignedTechId,
+        createdBy: currentUser.uid,
         date: new Date().toISOString()
       };
-      jobs.push(newJob);
+
+      if (FIREBASE_CONFIGURED) {
+        db.collection('jobs').add(newJob).catch(err => console.error('Failed to save job:', err));
+      } else {
+        jobs.push({ id: 'j-' + Date.now(), ...newJob });
+        saveLocalData();
+      }
       tempPhotoBase64 = null;
-      saveData();
       closeModal('modalJob');
       document.getElementById('formJob').reset();
       document.getElementById('photoPreviewContainer').classList.add('hidden');
