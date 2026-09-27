@@ -653,15 +653,18 @@
         <!-- Local Data Management & Backup -->
         <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 space-y-4">
           <h3 class="font-bold text-lg flex items-center gap-2">
-            <i data-lucide="database" class="w-5 h-5 text-sky-500"></i> Local Storage & Reset
+            <i data-lucide="database" class="w-5 h-5 text-sky-500"></i> Sample Data & Reset
           </h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            This app stores data locally in your browser so it works offline in the field. You can reset to demo seed data anytime.
+            Generate synthetic customer, job, and time records for this week. Firestore writes require an admin account; generated records are tagged for safe cleanup.
           </p>
 
           <div class="pt-4 space-y-2">
-            <button onclick="seedDemoData()" class="w-full py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold">
-              Load Sample Customer & Job Seed Data
+            <button onclick="generateSampleWeek()" class="w-full py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold">
+              Generate One Week of Sample Jobs & Time
+            </button>
+            <button id="removeGeneratedSamplesButton" onclick="removeGeneratedSampleData()" class="hidden w-full py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold">
+              Remove Generated Sample Data
             </button>
             <button onclick="clearAllData()" class="w-full py-2 bg-red-600/20 hover:bg-red-600 text-red-600 hover:text-white border border-red-500/30 rounded-lg text-xs font-bold transition-colors">
               Reset / Clear All App Data
@@ -1082,6 +1085,8 @@
       const canAssign = currentRole === ROLES.ADMIN || currentRole === ROLES.DISPATCHER;
       const wrapper = document.getElementById('jobAssignTechWrapper');
       if (wrapper) wrapper.classList.toggle('hidden', !canAssign);
+      const removeSamplesButton = document.getElementById('removeGeneratedSamplesButton');
+      if (removeSamplesButton) removeSamplesButton.classList.toggle('hidden', currentRole !== ROLES.ADMIN);
     }
 
     function unsubscribeAll() {
@@ -1215,6 +1220,194 @@
         console.error('Failed to update role:', err);
         alert('Could not update role — check Firestore security rules.');
       });
+    }
+
+    function getSampleWeekRecords() {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const mondayOffset = (today.getDay() + 6) % 7;
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - mondayOffset);
+      const sampleSetId = `sample-week-${Date.now()}`;
+      const customersToAdd = [];
+      const jobsToAdd = [];
+      const timeLogsToAdd = [];
+      const dailyDurations = [
+        [30, 105, 25, 120],
+        [25, 120, 35, 105],
+        [35, 90, 30, 135],
+        [20, 135, 40, 105],
+        [30, 120, 25, 150],
+        [40, 90, 30, 120],
+        [25, 105, 35, 90]
+      ];
+
+      const makeTime = (day, minuteOfDay) => {
+        const date = new Date(day);
+        date.setHours(0, 0, 0, 0);
+        date.setMinutes(minuteOfDay);
+        return date;
+      };
+
+      for (let dayIndex = 0; dayIndex <= mondayOffset; dayIndex += 1) {
+        const day = new Date(weekStart);
+        day.setDate(weekStart.getDate() + dayIndex);
+        const dayDurations = dailyDurations[dayIndex % dailyDurations.length];
+        const customer = {
+          name: `Sample HVAC Customer ${String(dayIndex + 1).padStart(2, '0')}`,
+          phone: `(555) 010-${String(1000 + dayIndex).slice(-4)}`,
+          address: `${120 + dayIndex} Demo Street, Sample City`,
+          equipment: dayIndex % 2 === 0 ? '3-Ton Split Heat Pump' : '2.5-Ton Central AC',
+          refrigerant: dayIndex % 2 === 0 ? 'R-410A' : 'R-454B',
+          createdBy: currentUser.uid,
+          sampleData: true,
+          sampleDataOwner: currentUser.uid,
+          sampleDataSetId: sampleSetId
+        };
+        customersToAdd.push(customer);
+
+        const firstJobStart = makeTime(day, 8 * 60 + dayDurations[0]);
+        const secondJobStart = makeTime(day, 8 * 60 + dayDurations[0] + dayDurations[1] + dayDurations[2]);
+        const firstJobEnd = new Date(firstJobStart.getTime() + dayDurations[1] * 60000);
+        const secondJobEnd = new Date(secondJobStart.getTime() + dayDurations[3] * 60000);
+        const jobTitles = ['Cooling inspection and airflow check', 'Heat pump maintenance and performance check'];
+        const dayJobs = [[firstJobStart, firstJobEnd], [secondJobStart, secondJobEnd]].map(([start, end], jobIndex) => ({
+          customerIndex: dayIndex,
+          data: {
+            title: jobTitles[jobIndex],
+            status: now >= end ? 'Completed' : now >= start ? 'In Progress' : 'Scheduled',
+            serialTag: `SAMPLE-${dayIndex + 1}${jobIndex + 1}`,
+            notes: 'Synthetic sample work order. No real customer or equipment data.',
+            photo: '',
+            assignedTechId: currentUser.uid,
+            createdBy: currentUser.uid,
+            date: start.toISOString(),
+            sampleData: true,
+            sampleDataOwner: currentUser.uid,
+            sampleDataSetId: sampleSetId
+          },
+          start,
+          end
+        }));
+
+        const jobIndexes = dayJobs.map((_, jobIndex) => jobsToAdd.length + jobIndex);
+        dayJobs.forEach(job => jobsToAdd.push({ customerIndex: job.customerIndex, data: job.data }));
+
+        const segmentSpecs = [
+          { type: 'DRIVE_TO_JOB', start: 8 * 60, duration: dayDurations[0], jobOffset: 0 },
+          { type: 'ON_JOB', start: 8 * 60 + dayDurations[0], duration: dayDurations[1], jobOffset: 0 },
+          { type: 'DRIVE_TO_JOB', start: 8 * 60 + dayDurations[0] + dayDurations[1], duration: dayDurations[2], jobOffset: 1 },
+          { type: 'ON_JOB', start: 8 * 60 + dayDurations[0] + dayDurations[1] + dayDurations[2], duration: dayDurations[3], jobOffset: 1 }
+        ];
+
+        segmentSpecs.forEach(segment => {
+          const start = makeTime(day, segment.start);
+          const plannedEnd = new Date(start.getTime() + segment.duration * 60000);
+          const end = dayIndex === mondayOffset ? new Date(Math.min(plannedEnd.getTime(), now.getTime())) : plannedEnd;
+          if (end <= start) return;
+
+          timeLogsToAdd.push({
+            type: segment.type,
+            startTime: start.toISOString(),
+            endTime: end.toISOString(),
+            durationSec: Math.round((end.getTime() - start.getTime()) / 1000),
+            jobIndex: jobIndexes[segment.jobOffset],
+            techId: currentUser.uid,
+            sampleData: true,
+            sampleDataOwner: currentUser.uid,
+            sampleDataSetId: sampleSetId
+          });
+        });
+      }
+
+      return { sampleSetId, customersToAdd, jobsToAdd, timeLogsToAdd, weekStart, today };
+    }
+
+    async function generateSampleWeek() {
+      if (FIREBASE_CONFIGURED && currentRole !== ROLES.ADMIN) {
+        alert('Only an Admin can generate Firestore sample records.');
+        return;
+      }
+
+      const samples = getSampleWeekRecords();
+      const dateRange = `${samples.weekStart.toLocaleDateString()} to ${samples.today.toLocaleDateString()}`;
+      const destination = FIREBASE_CONFIGURED ? `Firestore project ${firebaseConfig.projectId}` : 'local browser storage';
+      if (!confirm(`Generate ${samples.customersToAdd.length} sample customers, ${samples.jobsToAdd.length} jobs, and ${samples.timeLogsToAdd.length} drive/on-job entries for ${dateRange} in ${destination}?`)) return;
+
+      try {
+        if (FIREBASE_CONFIGURED) {
+          const batch = db.batch();
+          const customerRefs = samples.customersToAdd.map(() => db.collection('customers').doc());
+          const jobRefs = samples.jobsToAdd.map(() => db.collection('jobs').doc());
+          samples.customersToAdd.forEach((customer, index) => batch.set(customerRefs[index], customer));
+          samples.jobsToAdd.forEach((job, index) => {
+            batch.set(jobRefs[index], { ...job.data, customerId: customerRefs[job.customerIndex].id });
+          });
+          samples.timeLogsToAdd.forEach(log => {
+            batch.set(db.collection('timeLogs').doc(), {
+              ...log,
+              jobId: jobRefs[log.jobIndex].id
+            });
+          });
+          await batch.commit();
+        } else {
+          const customerIds = samples.customersToAdd.map((_, index) => `${samples.sampleSetId}-customer-${index + 1}`);
+          const jobIds = samples.jobsToAdd.map((_, index) => `${samples.sampleSetId}-job-${index + 1}`);
+          customers.push(...samples.customersToAdd.map((customer, index) => ({ id: customerIds[index], ...customer })));
+          jobs.push(...samples.jobsToAdd.map((job, index) => ({
+            id: jobIds[index],
+            ...job.data,
+            customerId: customerIds[job.customerIndex]
+          })));
+          timeLogs.push(...samples.timeLogsToAdd.map((log, index) => ({
+            id: `${samples.sampleSetId}-time-${index + 1}`,
+            ...log,
+            jobId: jobIds[log.jobIndex]
+          })));
+          saveLocalData();
+        }
+
+        alert(`Generated ${samples.customersToAdd.length} sample customers, ${samples.jobsToAdd.length} jobs, and ${samples.timeLogsToAdd.length} time entries.`);
+      } catch (error) {
+        console.error('Failed to generate sample week:', error);
+        alert('Could not generate sample data. Check your connection and Firestore permissions.');
+      }
+    }
+
+    async function removeGeneratedSampleData() {
+      if (currentRole !== ROLES.ADMIN) {
+        alert('Generated sample data can only be removed by an Admin.');
+        return;
+      }
+      if (!confirm('Remove only this account’s tagged generated sample customers, jobs, and time entries? Real and untagged records will be left alone.')) return;
+
+      try {
+        if (!FIREBASE_CONFIGURED) {
+          const beforeCount = customers.length + jobs.length + timeLogs.length;
+          customers = customers.filter(record => !(record.sampleData && record.sampleDataOwner === currentUser.uid));
+          jobs = jobs.filter(record => !(record.sampleData && record.sampleDataOwner === currentUser.uid));
+          timeLogs = timeLogs.filter(record => !(record.sampleData && record.sampleDataOwner === currentUser.uid));
+          const removedCount = beforeCount - customers.length - jobs.length - timeLogs.length;
+          saveLocalData();
+          alert(`Removed ${removedCount} tagged sample records.`);
+          return;
+        }
+
+        const collectionNames = ['customers', 'jobs', 'timeLogs'];
+        const snapshots = await Promise.all(collectionNames.map(name =>
+          db.collection(name).where('sampleDataOwner', '==', currentUser.uid).get()
+        ));
+        const sampleDocs = snapshots.flatMap(snapshot => snapshot.docs.filter(doc => doc.data().sampleData === true));
+        for (let offset = 0; offset < sampleDocs.length; offset += 400) {
+          const batch = db.batch();
+          sampleDocs.slice(offset, offset + 400).forEach(doc => batch.delete(doc.ref));
+          await batch.commit();
+        }
+        alert(`Removed ${sampleDocs.length} tagged sample records.`);
+      } catch (error) {
+        console.error('Failed to remove generated sample data:', error);
+        alert('Could not remove generated samples. Check your connection and Firestore permissions.');
+      }
     }
 
     // --- SEED DEMO DATA ---
