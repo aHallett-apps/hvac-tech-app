@@ -245,7 +245,7 @@
           </div>
           <span class="text-xs bg-sky-500/20 text-sky-300 px-2 py-1 rounded">R-410A Default</span>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4 text-xs">
           <div>
             <label class="block text-gray-400 mb-1">Refrigerant</label>
             <select id="quickRefrig" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white">
@@ -263,12 +263,29 @@
             <label class="block text-gray-400 mb-1">Suction Line Temp (°F)</label>
             <input type="number" id="quickLineTemp" placeholder="52" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white">
           </div>
+          <div>
+            <label class="block text-gray-400 mb-1">High Side PSIG</label>
+            <input type="number" id="quickHighPsig" placeholder="335" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white">
+          </div>
+          <div>
+            <label class="block text-gray-400 mb-1">Liquid Line Temp (°F)</label>
+            <input type="number" id="quickLiquidTemp" placeholder="94" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white">
+          </div>
+          <div>
+            <label class="block text-gray-400 mb-1" for="quickTargetSubcool">Target Subcool (°F, optional)</label>
+            <input type="number" id="quickTargetSubcool" min="0" step="0.1" inputmode="decimal" placeholder="e.g. 10" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white">
+          </div>
           <div class="flex flex-col justify-end">
             <button onclick="calcQuickSuperheat()" class="w-full bg-sky-600 hover:bg-sky-500 py-2 rounded-lg font-bold text-white transition-colors">Calculate</button>
           </div>
         </div>
         <div id="quickResult" class="mt-3 hidden p-2 bg-slate-800/80 rounded border border-slate-700 text-xs font-mono text-emerald-400">
-          Result: --
+          <div class="flex flex-wrap gap-x-5 gap-y-1">
+            <span>Superheat: <strong id="quickSuperheat">-- °F</strong></span>
+            <span>Subcooling: <strong id="quickSubcooling">-- °F</strong></span>
+            <span id="quickTargetRow" class="hidden">Target / Difference: <strong id="quickTargetResult">--</strong></span>
+          </div>
+          <p id="quickRecommendation" class="mt-2 font-sans text-gray-300"></p>
         </div>
       </div>
 
@@ -346,13 +363,44 @@
         </div>
       </div>
 
+      <!-- Week-to-date logged hours -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 p-5">
+        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
+          <div>
+            <h3 class="font-bold text-lg">Week-to-Date Hours</h3>
+            <p id="wtdDateRange" class="text-xs text-gray-500 dark:text-gray-400">--</p>
+          </div>
+          <div class="text-left sm:text-right">
+            <span class="block text-xs text-gray-500 dark:text-gray-400">Total logged</span>
+            <strong id="wtdTotalHours" class="text-xl font-bold">0.0 h</strong>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-x-5 gap-y-2 text-xs mb-5">
+          <span>On-job <strong id="wtdOnJobHours">0.0 h</strong></span>
+          <span>Driving <strong id="wtdDrivingHours">0.0 h</strong></span>
+          <span>Shift / other <strong id="wtdOtherHours">0.0 h</strong></span>
+        </div>
+        <div id="wtdDailyChart" class="space-y-3" role="list" aria-label="Daily logged hours this week"></div>
+        <div class="flex flex-wrap gap-x-4 gap-y-2 mt-5 pt-3 border-t border-gray-100 dark:border-slate-700 text-xs text-gray-500 dark:text-gray-400">
+          <span class="flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-sm bg-orange-500"></i>On-job</span>
+          <span class="flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-sm bg-sky-500"></i>Driving</span>
+          <span class="flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></i>Shift / other</span>
+        </div>
+        <p class="mt-3 text-[11px] text-gray-400">Based on saved time entries, including manual entries.</p>
+      </div>
+
       <!-- Time Log History -->
       <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 p-5">
         <div class="flex justify-between items-center mb-4">
           <h3 class="font-bold text-lg">Time Entry History</h3>
-          <button onclick="exportTimeLogsCSV()" class="px-3 py-1.5 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg text-xs font-medium flex items-center gap-1">
-            <i data-lucide="download" class="w-3.5 h-3.5"></i> Export CSV
-          </button>
+          <div class="flex gap-2">
+            <button onclick="openTimeEntryModal()" class="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Entry
+            </button>
+            <button onclick="exportTimeLogsCSV()" class="px-3 py-1.5 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg text-xs font-medium flex items-center gap-1">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> Export CSV
+            </button>
+          </div>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-left text-sm">
@@ -363,6 +411,7 @@
                 <th class="px-4 py-3">End Time</th>
                 <th class="px-4 py-3">Duration</th>
                 <th class="px-4 py-3">Associated Job</th>
+                <th class="px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody id="timeLogsTable" class="divide-y divide-gray-100 dark:divide-slate-700">
@@ -507,6 +556,12 @@
               </div>
             </div>
 
+            <div>
+              <label class="block text-xs font-semibold mb-1" for="calcTargetSubcool">Target Subcooling (°F, optional)</label>
+              <input type="number" id="calcTargetSubcool" min="0" step="0.1" inputmode="decimal" placeholder="e.g. 10" class="w-full bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-2">
+              <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Use the equipment manufacturer's target.</p>
+            </div>
+
             <button onclick="calculateDiagnostics()" class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold shadow transition-colors">
               Calculate Diagnostics
             </button>
@@ -520,6 +575,10 @@
               <div class="flex justify-between">
                 <span>Calculated Subcooling:</span>
                 <span id="resSubcooling" class="font-bold text-orange-500">-- °F</span>
+              </div>
+              <div id="resTargetSubcoolRow" class="hidden flex justify-between">
+                <span>Target / Difference:</span>
+                <span id="resTargetSubcool" class="font-bold">--</span>
               </div>
               <div id="resDiagnosisNote" class="text-xs font-sans text-gray-500 dark:text-gray-300 pt-2 border-t border-gray-200 dark:border-slate-600">
                 --
@@ -647,11 +706,51 @@
   </main>
   </div> <!-- /#appShell -->
 
+  <!-- MODAL: ADD / EDIT TIME ENTRY -->
+  <div id="modalTimeEntry" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4" role="dialog" aria-modal="true" aria-labelledby="timeEntryFormTitle">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-gray-200 dark:border-slate-700 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center">
+        <h3 id="timeEntryFormTitle" class="font-bold text-lg">Add Manual Time Entry</h3>
+        <button type="button" onclick="closeTimeEntryModal()" aria-label="Close time entry" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form id="timeEntryForm" onsubmit="saveTimeEntry(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+        <div>
+          <label for="timeEntryType" class="block text-xs font-semibold mb-1">Activity</label>
+          <select id="timeEntryType" required class="w-full bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-2.5 text-sm">
+            <option value="CLOCK_IN">Shift</option>
+            <option value="DRIVE_TO_JOB">Drive to Job</option>
+            <option value="ON_JOB">On-Job Work</option>
+            <option value="DRIVE_HOME">Drive Home</option>
+          </select>
+        </div>
+        <div>
+          <label for="timeEntryJobId" class="block text-xs font-semibold mb-1">Associated Job</label>
+          <select id="timeEntryJobId" class="w-full bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-2.5 text-sm">
+            <option value="">No job / general time</option>
+          </select>
+        </div>
+        <div>
+          <label for="timeEntryStart" class="block text-xs font-semibold mb-1">Start</label>
+          <input type="datetime-local" id="timeEntryStart" required class="w-full min-w-0 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-2.5 text-sm">
+        </div>
+        <div>
+          <label for="timeEntryEnd" class="block text-xs font-semibold mb-1">End</label>
+          <input type="datetime-local" id="timeEntryEnd" required class="w-full min-w-0 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-2.5 text-sm">
+        </div>
+        <div class="sm:col-span-2 flex justify-end gap-2 pt-2">
+          <button id="timeEntryCancel" type="button" onclick="closeTimeEntryModal()" class="hidden px-4 py-2 bg-gray-200 dark:bg-slate-700 rounded-lg text-sm font-semibold">Cancel</button>
+          <button id="timeEntrySubmit" type="submit" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-semibold">Add Entry</button>
+        </div>
+      </form>
+      <p id="timeEntryMessage" role="status" aria-live="polite" class="text-xs text-red-500"></p>
+    </div>
+  </div>
+
   <!-- MODAL: ADD/EDIT CUSTOMER -->
   <div id="modalCustomer" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-200 dark:border-slate-700 space-y-4">
       <div class="flex justify-between items-center">
-        <h3 class="font-bold text-lg">Add New Customer Profile</h3>
+        <h3 id="customerModalTitle" class="font-bold text-lg">Add New Customer Profile</h3>
         <button onclick="closeModal('modalCustomer')" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
       <form id="formCustomer" onsubmit="handleSaveCustomer(event)" class="space-y-3 text-xs">
@@ -684,7 +783,7 @@
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeModal('modalCustomer')" class="px-4 py-2 bg-gray-200 dark:bg-slate-700 rounded-lg font-bold">Cancel</button>
-          <button type="submit" class="px-4 py-2 bg-sky-600 text-white rounded-lg font-bold">Save Customer</button>
+          <button id="customerSubmitButton" type="submit" class="px-4 py-2 bg-sky-600 text-white rounded-lg font-bold">Save Customer</button>
         </div>
       </form>
     </div>
@@ -694,7 +793,7 @@
   <div id="modalJob" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 dark:border-slate-700 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
       <div class="flex justify-between items-center">
-        <h3 class="font-bold text-lg">Create New Work Order Job</h3>
+        <h3 id="jobModalTitle" class="font-bold text-lg">Create New Work Order Job</h3>
         <button onclick="closeModal('modalJob')" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
       <form id="formJob" onsubmit="handleSaveJob(event)" class="space-y-3 text-xs">
@@ -742,7 +841,7 @@
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeModal('modalJob')" class="px-4 py-2 bg-gray-200 dark:bg-slate-700 rounded-lg font-bold">Cancel</button>
-          <button type="submit" class="px-4 py-2 bg-orange-600 text-white rounded-lg font-bold">Create Job</button>
+          <button id="jobSubmitButton" type="submit" class="px-4 py-2 bg-orange-600 text-white rounded-lg font-bold">Create Job</button>
         </div>
       </form>
     </div>
@@ -850,6 +949,12 @@
     let jobs = [];
     let invoices = [];
     let timeLogs = [];
+    const TIME_ENTRY_TYPES = {
+      CLOCK_IN: 'Shift',
+      DRIVE_TO_JOB: 'Drive to Job',
+      ON_JOB: 'On-Job Work',
+      DRIVE_HOME: 'Drive Home'
+    };
     let activeShift = {
       state: 'CLOCK_OUT', // CLOCK_IN, DRIVE_TO_JOB, ON_JOB, DRIVE_HOME, CLOCK_OUT
       startTime: null,
@@ -857,6 +962,9 @@
     };
     let timerInterval = null;
     let tempPhotoBase64 = null;
+    let editingCustomerId = null;
+    let editingJobId = null;
+    let editingTimeEntryId = null;
 
     // --- INITIALIZATION ---
     window.onload = function() {
@@ -957,6 +1065,7 @@
       applyRolePermissions();
       lucide.createIcons();
       loadStoredData();
+      resetTimeEntryForm();
       initTheme();
       updateTimerUI();
       switchTab('dashboard');
@@ -1297,6 +1406,7 @@
     // --- RENDERING VIEWS ---
     function renderAll() {
       renderDashboard();
+      renderWeeklyTimeBreakdown();
       renderTimeLogs();
       renderCustomersAndJobs();
       renderInvoices();
@@ -1332,7 +1442,7 @@
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors';
         tr.innerHTML = `
-          <td class="px-4 py-3 font-semibold">${cust.name}</td>
+          <td class="px-4 py-3 font-semibold">${cust.id ? `<button type="button" data-customer-profile class="text-left hover:text-sky-600 dark:hover:text-sky-400 hover:underline">${cust.name}</button>` : cust.name}</td>
           <td class="px-4 py-3 text-gray-500 dark:text-gray-400">${cust.equipment || 'N/A'}</td>
           <td class="px-4 py-3">
             <span class="px-2 py-1 rounded-full text-xs font-medium ${job.status === 'Completed' ? 'bg-emerald-500/20 text-emerald-500' : 'bg-orange-500/20 text-orange-500'}">
@@ -1341,11 +1451,82 @@
           </td>
           <td class="px-4 py-3 text-xs text-gray-400">${new Date(job.date).toLocaleDateString()}</td>
           <td class="px-4 py-3 text-right">
-            <button onclick="switchTab('customers')" class="text-xs text-sky-600 dark:text-sky-400 font-bold">Details</button>
+            <button type="button" data-job-profile class="text-xs text-sky-600 dark:text-sky-400 font-bold hover:underline">Edit job</button>
           </td>
         `;
+        tr.querySelector('[data-customer-profile]')?.addEventListener('click', () => openEditCustomerModal(cust.id));
+        tr.querySelector('[data-job-profile]').addEventListener('click', () => openEditJobModal(job.id));
         tbody.appendChild(tr);
       });
+    }
+
+    function renderWeeklyTimeBreakdown() {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const mondayOffset = (today.getDay() + 6) % 7;
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - mondayOffset);
+      const days = Array.from({ length: mondayOffset + 1 }, (_, index) => {
+        const date = new Date(weekStart);
+        date.setDate(weekStart.getDate() + index);
+        return { date, onJob: 0, driving: 0, other: 0 };
+      });
+
+      timeLogs.forEach(log => {
+        const start = new Date(log.startTime).getTime();
+        const end = new Date(log.endTime).getTime();
+        if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
+
+        days.forEach(day => {
+          const dayStart = day.date.getTime();
+          const dayEndDate = new Date(day.date);
+          dayEndDate.setDate(dayEndDate.getDate() + 1);
+          const overlapStart = Math.max(start, dayStart);
+          const overlapEnd = Math.min(end, dayEndDate.getTime(), now.getTime());
+          if (overlapEnd <= overlapStart) return;
+
+          const hours = (overlapEnd - overlapStart) / 3600000;
+          if (log.type === 'ON_JOB') day.onJob += hours;
+          else if (log.type === 'DRIVE_TO_JOB' || log.type === 'DRIVE_HOME') day.driving += hours;
+          else day.other += hours;
+        });
+      });
+
+      const onJobTotal = days.reduce((sum, day) => sum + day.onJob, 0);
+      const drivingTotal = days.reduce((sum, day) => sum + day.driving, 0);
+      const otherTotal = days.reduce((sum, day) => sum + day.other, 0);
+      const totalHours = onJobTotal + drivingTotal + otherTotal;
+      const maxDayHours = Math.max(1, ...days.map(day => day.onJob + day.driving + day.other));
+      const formatHours = hours => `${hours.toFixed(1)} h`;
+
+      document.getElementById('wtdDateRange').textContent = `${weekStart.toLocaleDateString([], { month: 'short', day: 'numeric' })} to ${today.toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
+      document.getElementById('wtdTotalHours').textContent = formatHours(totalHours);
+      document.getElementById('wtdOnJobHours').textContent = formatHours(onJobTotal);
+      document.getElementById('wtdDrivingHours').textContent = formatHours(drivingTotal);
+      document.getElementById('wtdOtherHours').textContent = formatHours(otherTotal);
+
+      document.getElementById('wtdDailyChart').innerHTML = days.map(day => {
+        const total = day.onJob + day.driving + day.other;
+        const barWidth = hours => `${(hours / maxDayHours * 100).toFixed(2)}%`;
+        const weekday = day.date.toLocaleDateString([], { weekday: 'short' });
+        const dateLabel = day.date.toLocaleDateString([], { month: 'numeric', day: 'numeric' });
+        return `
+          <div class="grid grid-cols-[3.25rem_minmax(0,1fr)_3.5rem] items-center gap-3" role="listitem" aria-label="${weekday} ${dateLabel}: ${formatHours(total)}">
+            <div class="text-xs">
+              <span class="block font-semibold">${weekday}</span>
+              <span class="text-gray-400">${dateLabel}</span>
+            </div>
+            <div class="h-3 overflow-hidden rounded-full bg-gray-100 dark:bg-slate-700" aria-hidden="true">
+              <div class="flex h-full">
+                <span class="h-full bg-orange-500" style="width: ${barWidth(day.onJob)}" title="On-job: ${formatHours(day.onJob)}"></span>
+                <span class="h-full bg-sky-500" style="width: ${barWidth(day.driving)}" title="Driving: ${formatHours(day.driving)}"></span>
+                <span class="h-full bg-emerald-500" style="width: ${barWidth(day.other)}" title="Shift / other: ${formatHours(day.other)}"></span>
+              </div>
+            </div>
+            <span class="text-right text-xs font-mono font-semibold">${formatHours(total)}</span>
+          </div>
+        `;
+      }).join('');
     }
 
     function renderTimeLogs() {
@@ -1353,7 +1534,7 @@
       tbody.innerHTML = '';
 
       if (timeLogs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-3 text-center text-gray-400">No time entries recorded</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-3 text-center text-gray-400">No time entries yet. Add one above or clock in to start tracking.</td></tr>`;
         return;
       }
 
@@ -1361,14 +1542,130 @@
         const j = jobs.find(x => x.id === log.jobId);
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td class="px-4 py-3 font-bold text-xs">${log.type}</td>
-          <td class="px-4 py-3 text-xs text-gray-500">${new Date(log.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
-          <td class="px-4 py-3 text-xs text-gray-500">${new Date(log.endTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
-          <td class="px-4 py-3 font-mono font-bold text-xs">${(log.durationSec / 60).toFixed(0)} mins</td>
-          <td class="px-4 py-3 text-xs text-sky-500">${j ? j.title : 'General Shift'}</td>
+          <td class="px-4 py-3 font-bold text-xs">${TIME_ENTRY_TYPES[log.type] || log.type}</td>
+          <td class="px-4 py-3 text-xs text-gray-500">${new Date(log.startTime).toLocaleString([], {dateStyle: 'short', timeStyle: 'short'})}</td>
+          <td class="px-4 py-3 text-xs text-gray-500">${new Date(log.endTime).toLocaleString([], {dateStyle: 'short', timeStyle: 'short'})}</td>
+          <td class="px-4 py-3 font-mono font-bold text-xs">${(Number(log.durationSec || 0) / 60).toFixed(0)} mins</td>
+          <td class="px-4 py-3 text-xs text-sky-500">${j ? `<button type="button" data-job-profile class="text-left hover:underline">${j.title}</button>` : 'General time'}</td>
+          <td class="px-4 py-3 text-xs whitespace-nowrap">
+            <button type="button" data-time-entry-edit class="text-sky-600 dark:text-sky-400 font-semibold hover:underline">Edit</button>
+            <button type="button" data-time-entry-delete class="ml-2 text-red-600 dark:text-red-400 font-semibold hover:underline">Delete</button>
+          </td>
         `;
+        tr.querySelector('[data-job-profile]')?.addEventListener('click', () => openEditJobModal(j.id));
+        tr.querySelector('[data-time-entry-edit]').addEventListener('click', () => editTimeEntry(log.id));
+        tr.querySelector('[data-time-entry-delete]').addEventListener('click', () => deleteTimeEntry(log.id));
         tbody.appendChild(tr);
       });
+    }
+
+    function toDateTimeLocalValue(value) {
+      const date = value instanceof Date ? value : new Date(value);
+      if (!Number.isFinite(date.getTime())) return '';
+      const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+      return localDate.toISOString().slice(0, 16);
+    }
+
+    function openTimeEntryModal() {
+      resetTimeEntryForm();
+      document.getElementById('modalTimeEntry').classList.remove('hidden');
+      document.getElementById('timeEntryType').focus();
+    }
+
+    function closeTimeEntryModal() {
+      document.getElementById('modalTimeEntry').classList.add('hidden');
+      resetTimeEntryForm();
+    }
+
+    function resetTimeEntryForm() {
+      editingTimeEntryId = null;
+      document.getElementById('timeEntryForm').reset();
+      const end = new Date();
+      const start = new Date(end.getTime() - 60 * 60 * 1000);
+      document.getElementById('timeEntryStart').value = toDateTimeLocalValue(start);
+      document.getElementById('timeEntryEnd').value = toDateTimeLocalValue(end);
+      document.getElementById('timeEntryJobId').value = '';
+      document.getElementById('timeEntryFormTitle').textContent = 'Add Manual Time Entry';
+      document.getElementById('timeEntrySubmit').textContent = 'Add Entry';
+      document.getElementById('timeEntryCancel').classList.add('hidden');
+      document.getElementById('timeEntryMessage').textContent = '';
+    }
+
+    function editTimeEntry(logId) {
+      const log = timeLogs.find(item => item.id === logId);
+      if (!log) return;
+      editingTimeEntryId = logId;
+      const jobSelect = document.getElementById('timeEntryJobId');
+      if (log.jobId && !Array.from(jobSelect.options).some(option => option.value === log.jobId)) {
+        jobSelect.add(new Option('Unavailable job', log.jobId));
+      }
+      document.getElementById('timeEntryType').value = log.type;
+      jobSelect.value = log.jobId || '';
+      document.getElementById('timeEntryStart').value = toDateTimeLocalValue(log.startTime);
+      document.getElementById('timeEntryEnd').value = toDateTimeLocalValue(log.endTime);
+      document.getElementById('timeEntryFormTitle').textContent = 'Edit Time Entry';
+      document.getElementById('timeEntrySubmit').textContent = 'Save Changes';
+      document.getElementById('timeEntryCancel').classList.remove('hidden');
+      document.getElementById('timeEntryMessage').textContent = '';
+      document.getElementById('modalTimeEntry').classList.remove('hidden');
+      document.getElementById('timeEntryStart').focus();
+    }
+
+    async function saveTimeEntry(event) {
+      event.preventDefault();
+      const start = new Date(document.getElementById('timeEntryStart').value);
+      const end = new Date(document.getElementById('timeEntryEnd').value);
+      const message = document.getElementById('timeEntryMessage');
+      if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) {
+        message.textContent = 'Choose valid start and end times; end must be after start.';
+        return;
+      }
+
+      const existingLog = editingTimeEntryId ? timeLogs.find(item => item.id === editingTimeEntryId) : null;
+      const entry = {
+        type: document.getElementById('timeEntryType').value,
+        startTime: start.toISOString(),
+        endTime: end.toISOString(),
+        durationSec: Math.round((end.getTime() - start.getTime()) / 1000),
+        jobId: document.getElementById('timeEntryJobId').value || '',
+        techId: existingLog?.techId || currentUser.uid
+      };
+
+      try {
+        if (editingTimeEntryId) {
+          if (FIREBASE_CONFIGURED) {
+            await db.collection('timeLogs').doc(editingTimeEntryId).update(entry);
+          } else if (existingLog) {
+            Object.assign(existingLog, entry);
+            saveLocalData();
+          }
+        } else if (FIREBASE_CONFIGURED) {
+          await db.collection('timeLogs').add(entry);
+        } else {
+          timeLogs.unshift({ id: 'tl-' + Date.now(), ...entry });
+          saveLocalData();
+        }
+        closeTimeEntryModal();
+      } catch (error) {
+        console.error('Failed to save time entry:', error);
+        message.textContent = 'Could not save this entry. Check your connection and try again.';
+      }
+    }
+
+    async function deleteTimeEntry(logId) {
+      if (!confirm('Delete this time entry?')) return;
+      try {
+        if (FIREBASE_CONFIGURED) {
+          await db.collection('timeLogs').doc(logId).delete();
+        } else {
+          timeLogs = timeLogs.filter(log => log.id !== logId);
+          saveLocalData();
+        }
+        if (editingTimeEntryId === logId) closeTimeEntryModal();
+      } catch (error) {
+        console.error('Failed to delete time entry:', error);
+        alert('Could not delete this entry. Check your connection and try again.');
+      }
     }
 
     function renderCustomersAndJobs() {
@@ -1391,10 +1688,10 @@
         const card = document.createElement('div');
         card.className = 'bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 space-y-3';
         
-        let jobsHtml = custJobs.map(j => `
+        let jobsHtml = custJobs.map((j, index) => `
           <div class="p-3 bg-gray-50 dark:bg-slate-700/40 rounded-xl space-y-1 text-xs">
             <div class="flex justify-between font-bold">
-              <span>${j.title}</span>
+              <button type="button" data-job-index="${index}" class="text-left hover:text-sky-600 dark:hover:text-sky-400 hover:underline">${j.title}</button>
               <span class="text-orange-500">${j.status}</span>
             </div>
             <p class="text-gray-500 dark:text-gray-300">${j.notes || 'No notes added'}</p>
@@ -1406,11 +1703,14 @@
         card.innerHTML = `
           <div class="flex justify-between items-start">
             <div>
-              <h3 class="font-bold text-base">${cust.name}</h3>
+              <h3 class="font-bold text-base"><button type="button" data-customer-profile class="text-left hover:text-sky-600 dark:hover:text-sky-400 hover:underline">${cust.name}</button></h3>
               <p class="text-xs text-gray-500 dark:text-gray-400">${cust.address}</p>
               <p class="text-xs text-sky-600 dark:text-sky-400 font-medium">${cust.phone}</p>
             </div>
-            <span class="px-2 py-1 bg-sky-500/10 text-sky-500 rounded text-xs font-bold">${cust.refrigerant || 'R-410A'}</span>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-1 bg-sky-500/10 text-sky-500 rounded text-xs font-bold">${cust.refrigerant || 'R-410A'}</span>
+              <button type="button" data-customer-profile class="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline">Edit</button>
+            </div>
           </div>
 
           <div class="p-2 bg-slate-100 dark:bg-slate-700/30 rounded-lg text-xs">
@@ -1424,6 +1724,12 @@
             ${jobsHtml || '<p class="text-xs text-gray-400 italic">No job work orders on file</p>'}
           </div>
         `;
+        card.querySelectorAll('[data-customer-profile]').forEach(button => {
+          button.addEventListener('click', () => openEditCustomerModal(cust.id));
+        });
+        card.querySelectorAll('[data-job-index]').forEach(button => {
+          button.addEventListener('click', () => openEditJobModal(custJobs[Number(button.dataset.jobIndex)].id));
+        });
         container.appendChild(card);
       });
     }
@@ -1491,6 +1797,7 @@
 
     function populateJobSelects() {
       const trackerSelect = document.getElementById('timeTrackerJobSelect');
+      const timeEntryJobSelect = document.getElementById('timeEntryJobId');
       const modalSelect = document.getElementById('jobCustomerId');
       const techSelect = document.getElementById('jobAssignedTech');
 
@@ -1499,6 +1806,18 @@
         jobs.forEach(j => {
           trackerSelect.innerHTML += `<option value="${j.id}">${j.title}</option>`;
         });
+      }
+
+      if (timeEntryJobSelect) {
+        const selectedJobId = timeEntryJobSelect.value;
+        timeEntryJobSelect.innerHTML = '<option value="">No job / general time</option>';
+        jobs.forEach(job => {
+          const option = document.createElement('option');
+          option.value = job.id;
+          option.textContent = job.title;
+          timeEntryJobSelect.appendChild(option);
+        });
+        if (jobs.some(job => job.id === selectedJobId)) timeEntryJobSelect.value = selectedJobId;
       }
 
       if (modalSelect) {
@@ -1519,29 +1838,101 @@
     }
 
     // --- MODAL HANDLERS ---
-    function openCustomerModal() { document.getElementById('modalCustomer').classList.remove('hidden'); }
+    function openCustomerModal() {
+      editingCustomerId = null;
+      document.getElementById('formCustomer').reset();
+      document.getElementById('customerModalTitle').textContent = 'Add New Customer Profile';
+      document.getElementById('customerSubmitButton').textContent = 'Save Customer';
+      document.getElementById('modalCustomer').classList.remove('hidden');
+    }
+    function openEditCustomerModal(customerId) {
+      const customer = customers.find(item => item.id === customerId);
+      if (!customer) return;
+      editingCustomerId = customerId;
+      document.getElementById('custName').value = customer.name || '';
+      document.getElementById('custPhone').value = customer.phone || '';
+      document.getElementById('custAddress').value = customer.address || '';
+      document.getElementById('custEquip').value = customer.equipment || '';
+      document.getElementById('custRefrig').value = customer.refrigerant || 'R-410A';
+      document.getElementById('customerModalTitle').textContent = 'Edit Customer Profile';
+      document.getElementById('customerSubmitButton').textContent = 'Save Changes';
+      document.getElementById('modalCustomer').classList.remove('hidden');
+    }
     function openNewJobModal() {
       populateJobSelects();
+      editingJobId = null;
+      tempPhotoBase64 = null;
+      document.getElementById('formJob').reset();
+      document.getElementById('photoPreview').removeAttribute('src');
+      document.getElementById('photoPreviewContainer').classList.add('hidden');
+      document.getElementById('jobModalTitle').textContent = 'Create New Work Order Job';
+      document.getElementById('jobSubmitButton').textContent = 'Create Job';
       document.getElementById('modalJob').classList.remove('hidden');
     }
-    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    function openEditJobModal(jobId) {
+      const job = jobs.find(item => item.id === jobId);
+      if (!job) return;
+      populateJobSelects();
+      editingJobId = jobId;
+      tempPhotoBase64 = null;
+      document.getElementById('formJob').reset();
+      document.getElementById('jobCustomerId').value = job.customerId || '';
+      document.getElementById('jobTitle').value = job.title || '';
+      document.getElementById('jobStatus').value = job.status || 'Scheduled';
+      document.getElementById('jobSerialTag').value = job.serialTag || '';
+      document.getElementById('jobNotes').value = job.notes || '';
+      document.getElementById('jobPhotoInput').value = '';
+      const techSelect = document.getElementById('jobAssignedTech');
+      if (job.assignedTechId && !Array.from(techSelect.options).some(option => option.value === job.assignedTechId)) {
+        techSelect.add(new Option('Current assignment', job.assignedTechId));
+      }
+      techSelect.value = job.assignedTechId || '';
+      if (job.photo) {
+        document.getElementById('photoPreview').src = job.photo;
+        document.getElementById('photoPreviewContainer').classList.remove('hidden');
+      } else {
+        document.getElementById('photoPreview').removeAttribute('src');
+        document.getElementById('photoPreviewContainer').classList.add('hidden');
+      }
+      document.getElementById('jobModalTitle').textContent = 'Edit Work Order Job';
+      document.getElementById('jobSubmitButton').textContent = 'Save Changes';
+      document.getElementById('modalJob').classList.remove('hidden');
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+      if (id === 'modalCustomer') editingCustomerId = null;
+      if (id === 'modalJob') {
+        editingJobId = null;
+        tempPhotoBase64 = null;
+      }
+    }
 
     function handleSaveCustomer(e) {
       e.preventDefault();
-      const newCust = {
+      const customerData = {
         name: document.getElementById('custName').value,
         phone: document.getElementById('custPhone').value,
         address: document.getElementById('custAddress').value,
         equipment: document.getElementById('custEquip').value,
-        refrigerant: document.getElementById('custRefrig').value,
-        createdBy: currentUser.uid
+        refrigerant: document.getElementById('custRefrig').value
       };
 
-      if (FIREBASE_CONFIGURED) {
-        db.collection('customers').add(newCust).catch(err => console.error('Failed to save customer:', err));
+      if (editingCustomerId) {
+        if (FIREBASE_CONFIGURED) {
+          db.collection('customers').doc(editingCustomerId).update(customerData).catch(err => console.error('Failed to update customer:', err));
+        } else {
+          const customer = customers.find(item => item.id === editingCustomerId);
+          if (customer) Object.assign(customer, customerData);
+          saveLocalData();
+        }
       } else {
-        customers.push({ id: 'c-' + Date.now(), ...newCust });
-        saveLocalData();
+        const newCustomer = { ...customerData, createdBy: currentUser.uid };
+        if (FIREBASE_CONFIGURED) {
+          db.collection('customers').add(newCustomer).catch(err => console.error('Failed to save customer:', err));
+        } else {
+          customers.push({ id: 'c-' + Date.now(), ...newCustomer });
+          saveLocalData();
+        }
       }
       closeModal('modalCustomer');
       document.getElementById('formCustomer').reset();
@@ -1567,27 +1958,38 @@
     function handleSaveJob(e) {
       e.preventDefault();
       const canAssign = currentRole === ROLES.ADMIN || currentRole === ROLES.DISPATCHER;
+      const existingJob = editingJobId ? jobs.find(item => item.id === editingJobId) : null;
       const assignedTechId = canAssign
         ? (document.getElementById('jobAssignedTech').value || '')
-        : currentUser.uid; // technicians assign jobs to themselves
+        : (existingJob?.assignedTechId || currentUser.uid);
 
-      const newJob = {
+      const jobData = {
         customerId: document.getElementById('jobCustomerId').value,
         title: document.getElementById('jobTitle').value,
         status: document.getElementById('jobStatus').value,
         serialTag: document.getElementById('jobSerialTag').value,
         notes: document.getElementById('jobNotes').value,
-        photo: tempPhotoBase64 || '',
+        photo: tempPhotoBase64 || existingJob?.photo || '',
         assignedTechId,
-        createdBy: currentUser.uid,
-        date: new Date().toISOString()
+        createdBy: existingJob?.createdBy || currentUser.uid,
+        date: existingJob?.date || new Date().toISOString()
       };
 
-      if (FIREBASE_CONFIGURED) {
-        db.collection('jobs').add(newJob).catch(err => console.error('Failed to save job:', err));
+      if (editingJobId) {
+        if (FIREBASE_CONFIGURED) {
+          db.collection('jobs').doc(editingJobId).update(jobData).catch(err => console.error('Failed to update job:', err));
+        } else {
+          const job = jobs.find(item => item.id === editingJobId);
+          if (job) Object.assign(job, jobData);
+          saveLocalData();
+        }
       } else {
-        jobs.push({ id: 'j-' + Date.now(), ...newJob });
-        saveLocalData();
+        if (FIREBASE_CONFIGURED) {
+          db.collection('jobs').add(jobData).catch(err => console.error('Failed to save job:', err));
+        } else {
+          jobs.push({ id: 'j-' + Date.now(), ...jobData });
+          saveLocalData();
+        }
       }
       tempPhotoBase64 = null;
       closeModal('modalJob');
@@ -1602,43 +2004,106 @@
     };
 
     function calcQuickSuperheat() {
-      const psig = parseFloat(document.getElementById('quickPsig').value);
-      const lineTemp = parseFloat(document.getElementById('quickLineTemp').value);
       const resDiv = document.getElementById('quickResult');
+      const lowPsigValue = document.getElementById('quickPsig').value.trim();
+      const suctionTempValue = document.getElementById('quickLineTemp').value.trim();
+      const highPsigValue = document.getElementById('quickHighPsig').value.trim();
+      const liquidTempValue = document.getElementById('quickLiquidTemp').value.trim();
+      const targetSubcoolValue = document.getElementById('quickTargetSubcool').value.trim();
+      const requiredValues = [lowPsigValue, suctionTempValue, highPsigValue, liquidTempValue];
 
-      if (!psig || !lineTemp) {
-        alert('Please enter both PSIG and Line Temperature');
+      if (requiredValues.some(value => value === '' || !Number.isFinite(Number(value)))) {
+        document.getElementById('quickRecommendation').textContent = 'Enter valid suction pressure, suction-line temperature, high-side pressure, and liquid-line temperature readings.';
+        resDiv.classList.remove('hidden');
         return;
       }
 
-      // Linear estimation approximation for standard R410A
-      const satTemp = (psig * 0.3) + 5; 
-      const superheat = lineTemp - satTemp;
+      const diagnostic = calculateDiagnosticValues({
+        lowPsigValue,
+        suctionTempValue,
+        highPsigValue,
+        liquidTempValue,
+        targetSubcoolValue
+      });
 
-      resDiv.textContent = `Est. Saturation Temp: ${satTemp.toFixed(1)}°F | Calculated Superheat: ${superheat.toFixed(1)}°F`;
+      document.getElementById('quickSuperheat').textContent = `${diagnostic.superheat.toFixed(1)} °F`;
+      document.getElementById('quickSubcooling').textContent = `${diagnostic.subcooling.toFixed(1)} °F`;
+      document.getElementById('quickTargetRow').classList.toggle('hidden', !diagnostic.targetProvided);
+      document.getElementById('quickTargetResult').textContent = diagnostic.targetResultText;
+      document.getElementById('quickRecommendation').textContent = diagnostic.note;
       resDiv.classList.remove('hidden');
     }
 
-    function calculateDiagnostics() {
-      const lowPsig = parseFloat(document.getElementById('calcLowPsig').value) || 0;
-      const suctionTemp = parseFloat(document.getElementById('calcSuctionTemp').value) || 0;
-      const highPsig = parseFloat(document.getElementById('calcHighPsig').value) || 0;
-      const liquidTemp = parseFloat(document.getElementById('calcLiquidTemp').value) || 0;
+    function calculateDiagnosticValues({ lowPsigValue, suctionTempValue, highPsigValue, liquidTempValue, targetSubcoolValue }) {
+      const lowPsig = parseFloat(lowPsigValue) || 0;
+      const suctionTemp = parseFloat(suctionTempValue) || 0;
+      const highPsig = parseFloat(highPsigValue) || 0;
+      const liquidTemp = parseFloat(liquidTempValue) || 0;
+      const targetSubcool = targetSubcoolValue === '' ? null : Number(targetSubcoolValue);
 
       const satEvap = (lowPsig * 0.3) + 5;
       const satCond = (highPsig * 0.22) + 30;
-
       const sh = suctionTemp - satEvap;
       const sc = satCond - liquidTemp;
 
-      document.getElementById('resSuperheat').textContent = `${sh.toFixed(1)} °F`;
-      document.getElementById('resSubcooling').textContent = `${sc.toFixed(1)} °F`;
-      
       let note = 'Readings within standard operating ranges.';
       if (sh > 18) note = 'High Superheat detected: Possible undercharge or restriction.';
-      if (sc < 5) note = 'Low Subcooling detected: Check outdoor coil cleanliness or charge.';
+      let targetResultText = '';
 
-      document.getElementById('resDiagnosisNote').textContent = note;
+      if (targetSubcoolValue !== '') {
+        if (!Number.isFinite(targetSubcool) || targetSubcool < 0) {
+          targetResultText = 'Enter a valid target of 0 or higher.';
+          note = 'Enter a valid target subcooling value to get a comparison.';
+        } else if (highPsigValue === '' || liquidTempValue === '' || !Number.isFinite(Number(highPsigValue)) || !Number.isFinite(Number(liquidTempValue))) {
+          targetResultText = `${targetSubcool.toFixed(1)} °F target`;
+          note = 'Enter valid high-side pressure and liquid-line temperature readings to compare actual subcooling with the target.';
+        } else {
+          const difference = targetSubcool - sc;
+          const withinDisplayPrecision = Math.abs(difference) < 0.05;
+          const differenceText = withinDisplayPrecision
+            ? 'at target'
+            : `${Math.abs(difference).toFixed(1)} °F ${difference > 0 ? 'below' : 'above'} target`;
+          targetResultText = `${targetSubcool.toFixed(1)} °F / ${differenceText}`;
+
+          if (withinDisplayPrecision) {
+            note = 'Calculated subcooling matches the entered target. Confirm readings and operating conditions against the equipment manufacturer procedure.';
+          } else if (difference > 0) {
+            note = `Calculated subcooling is ${Math.abs(difference).toFixed(1)} °F below target. Verify the target, operating conditions, and measurements; then evaluate airflow, charge, and leaks using the manufacturer procedure. Do not add refrigerant from this comparison alone.`;
+          } else {
+            note = `Calculated subcooling is ${Math.abs(difference).toFixed(1)} °F above target. Verify the target, operating conditions, and measurements; then evaluate overcharge or a liquid-line restriction using the manufacturer procedure. Do not remove refrigerant from this comparison alone.`;
+          }
+
+          if (sh > 18) note = `High superheat is also present. ${note}`;
+        }
+      } else if (sc < 5) {
+        note = 'Low Subcooling detected: Check outdoor coil cleanliness or charge.';
+      }
+
+      note += ' Saturation estimates are approximate; verify with refrigerant-specific PT data (dew point for superheat and bubble point for subcooling in blends) before acting.';
+
+      return {
+        superheat: sh,
+        subcooling: sc,
+        targetProvided: targetSubcoolValue !== '',
+        targetResultText,
+        note
+      };
+    }
+
+    function calculateDiagnostics() {
+      const diagnostic = calculateDiagnosticValues({
+        lowPsigValue: document.getElementById('calcLowPsig').value,
+        suctionTempValue: document.getElementById('calcSuctionTemp').value,
+        highPsigValue: document.getElementById('calcHighPsig').value.trim(),
+        liquidTempValue: document.getElementById('calcLiquidTemp').value.trim(),
+        targetSubcoolValue: document.getElementById('calcTargetSubcool').value.trim()
+      });
+
+      document.getElementById('resSuperheat').textContent = `${diagnostic.superheat.toFixed(1)} °F`;
+      document.getElementById('resSubcooling').textContent = `${diagnostic.subcooling.toFixed(1)} °F`;
+      document.getElementById('resTargetSubcoolRow').classList.toggle('hidden', !diagnostic.targetProvided);
+      document.getElementById('resTargetSubcool').textContent = diagnostic.targetResultText;
+      document.getElementById('resDiagnosisNote').textContent = diagnostic.note;
       document.getElementById('diagnosticResults').classList.remove('hidden');
     }
 
