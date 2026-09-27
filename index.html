@@ -151,7 +151,10 @@
           <i data-lucide="clock" class="w-4 h-4"></i> Time & GPS Drive
         </button>
         <button onclick="switchTab('customers')" id="nav-customers" data-tab="customers" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-slate-800 transition-colors">
-          <i data-lucide="users" class="w-4 h-4"></i> Customers & Jobs
+          <i data-lucide="users" class="w-4 h-4"></i> Customers
+        </button>
+        <button onclick="switchTab('jobs')" id="nav-jobs" data-tab="jobs" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-slate-800 transition-colors">
+          <i data-lucide="clipboard-list" class="w-4 h-4"></i> Jobs
         </button>
         <button onclick="switchTab('invoices')" id="nav-invoices" data-tab="invoices" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-slate-800 transition-colors">
           <i data-lucide="receipt" class="w-4 h-4"></i> Invoices & QB Sync
@@ -293,7 +296,7 @@
       <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 p-5">
         <div class="flex justify-between items-center mb-4">
           <h3 class="font-bold text-lg">Active & Recent Field Jobs</h3>
-          <button onclick="switchTab('customers')" class="text-xs text-sky-600 dark:text-sky-400 hover:underline">View All</button>
+          <button onclick="switchTab('jobs')" class="text-xs text-sky-600 dark:text-sky-400 hover:underline">View Jobs</button>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-left text-sm">
@@ -370,9 +373,17 @@
             <h3 class="font-bold text-lg">Week-to-Date Hours</h3>
             <p id="wtdDateRange" class="text-xs text-gray-500 dark:text-gray-400">--</p>
           </div>
-          <div class="text-left sm:text-right">
-            <span class="block text-xs text-gray-500 dark:text-gray-400">Total logged</span>
-            <strong id="wtdTotalHours" class="text-xl font-bold">0.0 h</strong>
+          <div class="flex flex-wrap items-end gap-4">
+            <label id="wtdTechFilterWrapper" class="hidden text-xs">
+              <span class="block text-gray-500 dark:text-gray-400 mb-1">Technician</span>
+              <select id="wtdTechFilter" onchange="renderWeeklyTimeBreakdown()" class="bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-2 text-sm">
+                <option value="all">All technicians</option>
+              </select>
+            </label>
+            <div class="text-left sm:text-right">
+              <span class="block text-xs text-gray-500 dark:text-gray-400">Total logged</span>
+              <strong id="wtdTotalHours" class="text-xl font-bold">0.0 h</strong>
+            </div>
           </div>
         </div>
         <div class="flex flex-wrap gap-x-5 gap-y-2 text-xs mb-5">
@@ -410,6 +421,7 @@
                 <th class="px-4 py-3">Start Time</th>
                 <th class="px-4 py-3">End Time</th>
                 <th class="px-4 py-3">Duration</th>
+                <th class="px-4 py-3">Technician</th>
                 <th class="px-4 py-3">Associated Job</th>
                 <th class="px-4 py-3">Actions</th>
               </tr>
@@ -422,16 +434,40 @@
       </div>
     </section>
 
-    <!-- CUSTOMERS & JOBS VIEW -->
+    <!-- CUSTOMERS VIEW -->
     <section id="view-customers" class="space-y-6 hidden">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 class="text-2xl font-bold tracking-tight">Customers & Field Jobs</h2>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Manage equipment details, photos, and job work orders</p>
+          <h2 class="text-2xl font-bold tracking-tight">Customers</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Customer profiles and installed equipment</p>
         </div>
-        <div class="flex gap-2">
-          <button onclick="openCustomerModal()" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium shadow flex items-center gap-2">
-            <i data-lucide="user-plus" class="w-4 h-4"></i> Add Customer
+        <button onclick="openCustomerModal()" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium shadow flex items-center gap-2">
+          <i data-lucide="user-plus" class="w-4 h-4"></i> Add Customer
+        </button>
+      </div>
+
+      <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
+        <div class="relative flex-1">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-gray-400"></i>
+          <input type="search" id="custSearchInput" oninput="renderCustomers()" placeholder="Search customers, address, or equipment..." class="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+        </div>
+      </div>
+
+      <div id="customersContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Customer profiles -->
+      </div>
+    </section>
+
+    <!-- JOBS VIEW -->
+    <section id="view-jobs" class="space-y-6 hidden">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 class="text-2xl font-bold tracking-tight">Jobs</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Work orders, customer links, status, and assigned technicians</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="exportJobsCSV()" class="px-3 py-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg text-sm font-medium flex items-center gap-2">
+            <i data-lucide="download" class="w-4 h-4"></i> Export Jobs
           </button>
           <button onclick="openNewJobModal()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium shadow flex items-center gap-2">
             <i data-lucide="plus" class="w-4 h-4"></i> Create Job
@@ -439,17 +475,32 @@
         </div>
       </div>
 
-      <!-- Search & Filter Bar -->
-      <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 flex flex-col sm:flex-row gap-3">
-        <div class="relative flex-1">
+      <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_16rem] gap-3">
+        <div class="relative">
           <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-gray-400"></i>
-          <input type="text" id="custSearchInput" onkeyup="renderCustomersAndJobs()" placeholder="Search customers, addresses, or job notes..." class="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+          <input type="search" id="jobSearchInput" oninput="renderJobs()" placeholder="Search title, notes, serial, customer, or technician..." class="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
         </div>
+        <select id="jobCustomerFilter" onchange="renderJobs()" aria-label="Filter jobs by customer" class="w-full bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm">
+          <option value="all">All customers</option>
+        </select>
       </div>
 
-      <!-- Customers Grid -->
-      <div id="customersContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Dynamically Populated Card UI -->
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="text-xs text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-slate-700/50">
+              <tr>
+                <th class="px-4 py-3">Job</th>
+                <th class="px-4 py-3">Customer</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Technician</th>
+                <th class="px-4 py-3">Date</th>
+                <th class="px-4 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="jobsTable" class="divide-y divide-gray-100 dark:divide-slate-700"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -728,9 +779,16 @@
         </div>
         <div>
           <label for="timeEntryJobId" class="block text-xs font-semibold mb-1">Associated Job</label>
-          <select id="timeEntryJobId" class="w-full bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-2.5 text-sm">
+          <select id="timeEntryJobId" onchange="syncTimeEntryTechnicianToJob()" class="w-full bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-2.5 text-sm">
             <option value="">No job / general time</option>
           </select>
+        </div>
+        <div id="timeEntryTechWrapper" class="hidden sm:col-span-2">
+          <label for="timeEntryTechId" class="block text-xs font-semibold mb-1">Credit Hours To</label>
+          <select id="timeEntryTechId" class="w-full bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-2.5 text-sm">
+            <option value="">Current technician</option>
+          </select>
+          <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Job-linked entries default to the job’s assigned technician.</p>
         </div>
         <div>
           <label for="timeEntryStart" class="block text-xs font-semibold mb-1">Start</label>
@@ -928,9 +986,9 @@
     };
 
     const ROLE_NAV_ACCESS = {
-      [ROLES.ADMIN]:      ['dashboard', 'tracker', 'customers', 'invoices', 'calculator', 'users', 'settings'],
-      [ROLES.DISPATCHER]: ['dashboard', 'tracker', 'customers', 'invoices', 'calculator'],
-      [ROLES.TECHNICIAN]: ['dashboard', 'tracker', 'customers', 'calculator']
+      [ROLES.ADMIN]:      ['dashboard', 'tracker', 'customers', 'jobs', 'invoices', 'calculator', 'users', 'settings'],
+      [ROLES.DISPATCHER]: ['dashboard', 'tracker', 'customers', 'jobs', 'invoices', 'calculator'],
+      [ROLES.TECHNICIAN]: ['dashboard', 'tracker', 'customers', 'jobs', 'calculator']
     };
 
     let currentUser = null;   // { uid, email } — Firebase Auth user (or demo stand-in)
@@ -1085,8 +1143,70 @@
       const canAssign = currentRole === ROLES.ADMIN || currentRole === ROLES.DISPATCHER;
       const wrapper = document.getElementById('jobAssignTechWrapper');
       if (wrapper) wrapper.classList.toggle('hidden', !canAssign);
+      const timeEntryTechWrapper = document.getElementById('timeEntryTechWrapper');
+      if (timeEntryTechWrapper) timeEntryTechWrapper.classList.toggle('hidden', !canAssign);
+      const wtdTechFilterWrapper = document.getElementById('wtdTechFilterWrapper');
+      if (wtdTechFilterWrapper) wtdTechFilterWrapper.classList.toggle('hidden', !canAssign);
       const removeSamplesButton = document.getElementById('removeGeneratedSamplesButton');
       if (removeSamplesButton) removeSamplesButton.classList.toggle('hidden', currentRole !== ROLES.ADMIN);
+    }
+
+    function getTechnicianOptions() {
+      const technicians = new Map();
+      allUsers.filter(user => user.role === ROLES.TECHNICIAN).forEach(user => {
+        technicians.set(user.uid, user.email || user.displayName || user.uid);
+      });
+      jobs.forEach(job => {
+        if (job.assignedTechId && !technicians.has(job.assignedTechId)) {
+          technicians.set(job.assignedTechId, job.assignedTechName || job.assignedTechId);
+        }
+      });
+      timeLogs.forEach(log => {
+        if (log.techId && !technicians.has(log.techId)) {
+          technicians.set(log.techId, log.techName || log.techId);
+        }
+      });
+      if (currentUser?.uid && !technicians.has(currentUser.uid)) {
+        technicians.set(currentUser.uid, currentUser.email || 'Me');
+      }
+      return Array.from(technicians, ([uid, label]) => ({ uid, label }));
+    }
+
+    function getTechnicianLabel(technicianId) {
+      if (!technicianId) return 'Unassigned';
+      return getTechnicianOptions().find(technician => technician.uid === technicianId)?.label || technicianId;
+    }
+
+    function getJobAssignedTechId(jobId, fallbackId = currentUser?.uid || '') {
+      const job = jobs.find(item => item.id === jobId);
+      return job?.assignedTechId || fallbackId;
+    }
+
+    function syncTimeEntryTechnicianToJob() {
+      const jobId = document.getElementById('timeEntryJobId').value;
+      const assignedTechId = getJobAssignedTechId(jobId, '');
+      document.getElementById('timeEntryTechId').value = assignedTechId;
+    }
+
+    function populateTechnicianSelectors() {
+      const technicians = getTechnicianOptions();
+      const timeEntrySelect = document.getElementById('timeEntryTechId');
+      if (timeEntrySelect) {
+        const selectedTechId = timeEntrySelect.value;
+        timeEntrySelect.innerHTML = '<option value="">Use job assignee / current technician</option>';
+        technicians.forEach(technician => timeEntrySelect.add(new Option(technician.label, technician.uid)));
+        if (technicians.some(technician => technician.uid === selectedTechId)) timeEntrySelect.value = selectedTechId;
+      }
+
+      const wtdFilter = document.getElementById('wtdTechFilter');
+      if (wtdFilter) {
+        const selectedTechId = wtdFilter.value || 'all';
+        wtdFilter.innerHTML = '<option value="all">All technicians</option>';
+        technicians.forEach(technician => wtdFilter.add(new Option(technician.label, technician.uid)));
+        wtdFilter.value = technicians.some(technician => technician.uid === selectedTechId) || selectedTechId === 'all'
+          ? selectedTechId
+          : 'all';
+      }
     }
 
     function unsubscribeAll() {
@@ -1161,6 +1281,7 @@
           allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
           renderUsersView();
           populateJobSelects();
+          populateTechnicianSelectors();
         }, err => console.error('users listener error:', err)));
       }
     }
@@ -1499,7 +1620,8 @@
           endTime: now,
           durationSec: durationSec,
           jobId: activeShift.jobId || '',
-          techId: currentUser.uid
+          techId: getJobAssignedTechId(activeShift.jobId, currentUser.uid),
+          recordedBy: currentUser.uid
         };
 
         if (FIREBASE_CONFIGURED) {
@@ -1600,57 +1722,100 @@
     // --- RENDERING VIEWS ---
     function renderAll() {
       renderDashboard();
+      populateTechnicianSelectors();
       renderWeeklyTimeBreakdown();
       renderTimeLogs();
-      renderCustomersAndJobs();
+      renderCustomers();
+      renderJobs();
       renderInvoices();
       populateJobSelects();
     }
 
     function renderDashboard() {
-      // Metrics
-      const todayCount = jobs.filter(j => j.status !== 'Completed').length;
+      const todayCount = jobs.filter(job => job.status !== 'Completed').length;
       document.getElementById('dashTodayJobsCount').textContent = jobs.length;
       document.getElementById('dashTodayJobsSub').textContent = `${todayCount} pending completion`;
 
-      let totalJobSec = timeLogs.filter(l => l.type === 'ON_JOB').reduce((acc, curr) => acc + curr.durationSec, 0);
-      let totalDriveSec = timeLogs.filter(l => l.type.includes('DRIVE')).reduce((acc, curr) => acc + curr.durationSec, 0);
+      const totalJobSec = timeLogs.filter(log => log.type === 'ON_JOB').reduce((total, log) => total + log.durationSec, 0);
+      const totalDriveSec = timeLogs.filter(log => log.type.includes('DRIVE')).reduce((total, log) => total + log.durationSec, 0);
+      document.getElementById('dashTotalJobTime').textContent = `${(totalJobSec / 3600).toFixed(1)}h`;
+      document.getElementById('dashTotalDriveTime').textContent = `${(totalDriveSec / 3600).toFixed(1)}h`;
 
-      document.getElementById('dashTotalJobTime').textContent = `${(totalJobSec/3600).toFixed(1)}h`;
-      document.getElementById('dashTotalDriveTime').textContent = `${(totalDriveSec/3600).toFixed(1)}h`;
+      const syncedInvoices = invoices.filter(invoice => invoice.qbSynced).length;
+      document.getElementById('dashQbSyncCount').textContent = `${syncedInvoices} / ${invoices.length}`;
 
-      const syncedInv = invoices.filter(i => i.qbSynced).length;
-      document.getElementById('dashQbSyncCount').textContent = `${syncedInv} / ${invoices.length}`;
-
-      // Table
       const tbody = document.getElementById('dashJobsTable');
       tbody.innerHTML = '';
-
       if (jobs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-3 text-center text-gray-400">No active field jobs logged</td></tr>`;
+        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-3 text-center text-gray-400">No active field jobs logged</td></tr>';
         return;
       }
 
       jobs.slice(0, 5).forEach(job => {
-        const cust = customers.find(c => c.id === job.customerId) || { name: 'Unknown' };
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors';
-        tr.innerHTML = `
-          <td class="px-4 py-3 font-semibold">${cust.id ? `<button type="button" data-customer-profile class="text-left hover:text-sky-600 dark:hover:text-sky-400 hover:underline">${cust.name}</button>` : cust.name}</td>
-          <td class="px-4 py-3 text-gray-500 dark:text-gray-400">${cust.equipment || 'N/A'}</td>
-          <td class="px-4 py-3">
-            <span class="px-2 py-1 rounded-full text-xs font-medium ${job.status === 'Completed' ? 'bg-emerald-500/20 text-emerald-500' : 'bg-orange-500/20 text-orange-500'}">
-              ${job.status}
-            </span>
-          </td>
-          <td class="px-4 py-3 text-xs text-gray-400">${new Date(job.date).toLocaleDateString()}</td>
-          <td class="px-4 py-3 text-right">
-            <button type="button" data-job-profile class="text-xs text-sky-600 dark:text-sky-400 font-bold hover:underline">Edit job</button>
-          </td>
+        const customer = customers.find(item => item.id === job.customerId) || { name: 'Unknown' };
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors';
+        row.innerHTML = `
+          <td class="px-4 py-3 font-semibold">${customer.id ? '<button type="button" data-customer-profile class="text-left hover:text-sky-600 dark:hover:text-sky-400 hover:underline"></button>' : customer.name}</td>
+          <td class="px-4 py-3 text-gray-500 dark:text-gray-400">${customer.equipment || 'N/A'}</td>
+          <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-medium ${job.status === 'Completed' ? 'bg-emerald-500/20 text-emerald-500' : 'bg-orange-500/20 text-orange-500'}">${job.status}</span></td>
+          <td class="px-4 py-3 text-xs text-gray-400">${job.date && Number.isFinite(new Date(job.date).getTime()) ? new Date(job.date).toLocaleDateString() : '—'}</td>
+          <td class="px-4 py-3 text-right"><button type="button" data-job-profile class="text-xs text-sky-600 dark:text-sky-400 font-bold hover:underline">Edit job</button></td>
         `;
-        tr.querySelector('[data-customer-profile]')?.addEventListener('click', () => openEditCustomerModal(cust.id));
-        tr.querySelector('[data-job-profile]').addEventListener('click', () => openEditJobModal(job.id));
-        tbody.appendChild(tr);
+        const customerButton = row.querySelector('[data-customer-profile]');
+        if (customerButton) {
+          customerButton.textContent = customer.name;
+          customerButton.addEventListener('click', () => openEditCustomerModal(customer.id));
+        }
+        row.querySelector('[data-job-profile]').addEventListener('click', () => openEditJobModal(job.id));
+        tbody.appendChild(row);
+      });
+    }
+
+    function renderCustomers() {
+      const container = document.getElementById('customersContainer');
+      const query = (document.getElementById('custSearchInput')?.value || '').toLowerCase();
+      container.innerHTML = '';
+
+      const filteredCustomers = customers.filter(customer =>
+        [customer.name, customer.address, customer.phone, customer.equipment, customer.refrigerant]
+          .some(value => (value || '').toLowerCase().includes(query))
+      );
+      if (filteredCustomers.length === 0) {
+        container.innerHTML = '<div class="col-span-full text-center py-10 text-sm text-gray-400">No customers match this search.</div>';
+        return;
+      }
+
+      filteredCustomers.forEach(customer => {
+        const linkedJobCount = jobs.filter(job => job.customerId === customer.id).length;
+        const card = document.createElement('div');
+        card.className = 'bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 space-y-4';
+        card.innerHTML = `
+          <div class="flex justify-between items-start gap-3">
+            <div>
+              <h3 class="font-bold text-base"><button type="button" data-customer-profile class="text-left hover:text-sky-600 dark:hover:text-sky-400 hover:underline"></button></h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400">${customer.address || 'No address on file'}</p>
+              <p class="text-xs text-sky-600 dark:text-sky-400 font-medium">${customer.phone || 'No phone on file'}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-1 bg-sky-500/10 text-sky-500 rounded text-xs font-bold">${customer.refrigerant || 'R-410A'}</span>
+              <button type="button" data-customer-edit class="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline">Edit</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3 border-t border-gray-100 dark:border-slate-700 pt-3 text-sm">
+            <div><span class="block text-[11px] uppercase text-gray-400">Equipment</span><span class="font-medium">${customer.equipment || 'Not specified'}</span></div>
+            <div><span class="block text-[11px] uppercase text-gray-400">Linked jobs</span><span class="font-medium">${linkedJobCount}</span></div>
+          </div>
+          <div class="flex justify-end border-t border-gray-100 dark:border-slate-700 pt-3">
+            <button type="button" data-view-customer-jobs class="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:underline">View related jobs</button>
+          </div>
+        `;
+        card.querySelector('[data-customer-profile]').textContent = customer.name;
+        card.querySelectorAll('[data-customer-profile], [data-customer-edit]').forEach(button => {
+          button.addEventListener('click', () => openEditCustomerModal(customer.id));
+        });
+        card.querySelector('[data-view-customer-jobs]').addEventListener('click', () => showJobsForCustomer(customer.id));
+        container.appendChild(card);
       });
     }
 
@@ -1665,8 +1830,13 @@
         date.setDate(weekStart.getDate() + index);
         return { date, onJob: 0, driving: 0, other: 0 };
       });
+      const selectedTechId = currentRole === ROLES.TECHNICIAN
+        ? currentUser.uid
+        : (document.getElementById('wtdTechFilter')?.value || 'all');
 
       timeLogs.forEach(log => {
+        const creditedTechId = log.techId || getJobAssignedTechId(log.jobId, currentUser.uid);
+        if (selectedTechId !== 'all' && creditedTechId !== selectedTechId) return;
         const start = new Date(log.startTime).getTime();
         const end = new Date(log.endTime).getTime();
         if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
@@ -1728,7 +1898,7 @@
       tbody.innerHTML = '';
 
       if (timeLogs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-3 text-center text-gray-400">No time entries yet. Add one above or clock in to start tracking.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-3 text-center text-gray-400">No time entries yet. Add one above or clock in to start tracking.</td></tr>`;
         return;
       }
 
@@ -1740,6 +1910,7 @@
           <td class="px-4 py-3 text-xs text-gray-500">${new Date(log.startTime).toLocaleString([], {dateStyle: 'short', timeStyle: 'short'})}</td>
           <td class="px-4 py-3 text-xs text-gray-500">${new Date(log.endTime).toLocaleString([], {dateStyle: 'short', timeStyle: 'short'})}</td>
           <td class="px-4 py-3 font-mono font-bold text-xs">${(Number(log.durationSec || 0) / 60).toFixed(0)} mins</td>
+          <td class="px-4 py-3 text-xs">${getTechnicianLabel(log.techId || getJobAssignedTechId(log.jobId, ''))}</td>
           <td class="px-4 py-3 text-xs text-sky-500">${j ? `<button type="button" data-job-profile class="text-left hover:underline">${j.title}</button>` : 'General time'}</td>
           <td class="px-4 py-3 text-xs whitespace-nowrap">
             <button type="button" data-time-entry-edit class="text-sky-600 dark:text-sky-400 font-semibold hover:underline">Edit</button>
@@ -1788,6 +1959,7 @@
     function editTimeEntry(logId) {
       const log = timeLogs.find(item => item.id === logId);
       if (!log) return;
+      populateTechnicianSelectors();
       editingTimeEntryId = logId;
       const jobSelect = document.getElementById('timeEntryJobId');
       if (log.jobId && !Array.from(jobSelect.options).some(option => option.value === log.jobId)) {
@@ -1795,6 +1967,7 @@
       }
       document.getElementById('timeEntryType').value = log.type;
       jobSelect.value = log.jobId || '';
+      document.getElementById('timeEntryTechId').value = log.techId || '';
       document.getElementById('timeEntryStart').value = toDateTimeLocalValue(log.startTime);
       document.getElementById('timeEntryEnd').value = toDateTimeLocalValue(log.endTime);
       document.getElementById('timeEntryFormTitle').textContent = 'Edit Time Entry';
@@ -1816,13 +1989,16 @@
       }
 
       const existingLog = editingTimeEntryId ? timeLogs.find(item => item.id === editingTimeEntryId) : null;
+      const jobId = document.getElementById('timeEntryJobId').value || '';
+      const selectedTechId = document.getElementById('timeEntryTechId').value;
       const entry = {
         type: document.getElementById('timeEntryType').value,
         startTime: start.toISOString(),
         endTime: end.toISOString(),
         durationSec: Math.round((end.getTime() - start.getTime()) / 1000),
-        jobId: document.getElementById('timeEntryJobId').value || '',
-        techId: existingLog?.techId || currentUser.uid
+        jobId,
+        techId: selectedTechId || getJobAssignedTechId(jobId, existingLog?.techId || currentUser.uid),
+        recordedBy: existingLog?.recordedBy || currentUser.uid
       };
 
       try {
@@ -1862,70 +2038,86 @@
       }
     }
 
-    function renderCustomersAndJobs() {
-      const container = document.getElementById('customersContainer');
-      const query = (document.getElementById('custSearchInput')?.value || '').toLowerCase();
-      container.innerHTML = '';
+    function showJobsForCustomer(customerId) {
+      switchTab('jobs');
+      document.getElementById('jobCustomerFilter').value = customerId;
+      renderJobs();
+    }
 
-      const filteredCustomers = customers.filter(c => 
-        c.name.toLowerCase().includes(query) || 
-        c.address.toLowerCase().includes(query)
-      );
+    function renderJobs() {
+      const customerFilter = document.getElementById('jobCustomerFilter');
+      const selectedCustomerId = customerFilter.value || 'all';
+      customerFilter.innerHTML = '<option value="all">All customers</option>';
+      customers.forEach(customer => customerFilter.add(new Option(customer.name, customer.id)));
+      customerFilter.value = customers.some(customer => customer.id === selectedCustomerId) || selectedCustomerId === 'all'
+        ? selectedCustomerId
+        : 'all';
 
-      if (filteredCustomers.length === 0) {
-        container.innerHTML = `<div class="col-span-2 text-center py-8 text-gray-400">No customers found.</div>`;
+      const query = (document.getElementById('jobSearchInput').value || '').trim().toLowerCase();
+      const customerId = customerFilter.value;
+      const filteredJobs = jobs.filter(job => {
+        const customer = customers.find(item => item.id === job.customerId);
+        const customerName = customer?.name || 'Unknown customer';
+        const searchable = [job.title, job.status, job.serialTag, job.notes, customerName, customer?.address, getTechnicianLabel(job.assignedTechId)];
+        return (customerId === 'all' || job.customerId === customerId) && searchable.some(value => (value || '').toLowerCase().includes(query));
+      });
+
+      const tbody = document.getElementById('jobsTable');
+      tbody.innerHTML = '';
+      if (filteredJobs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-10 text-center text-sm text-gray-400">No jobs match these filters.</td></tr>`;
         return;
       }
 
-      filteredCustomers.forEach(cust => {
-        const custJobs = jobs.filter(j => j.customerId === cust.id);
-        const card = document.createElement('div');
-        card.className = 'bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 space-y-3';
-        
-        let jobsHtml = custJobs.map((j, index) => `
-          <div class="p-3 bg-gray-50 dark:bg-slate-700/40 rounded-xl space-y-1 text-xs">
-            <div class="flex justify-between font-bold">
-              <button type="button" data-job-index="${index}" class="text-left hover:text-sky-600 dark:hover:text-sky-400 hover:underline">${j.title}</button>
-              <span class="text-orange-500">${j.status}</span>
-            </div>
-            <p class="text-gray-500 dark:text-gray-300">${j.notes || 'No notes added'}</p>
-            ${j.serialTag ? `<div class="text-[10px] text-gray-400 font-mono">Tag: ${j.serialTag}</div>` : ''}
-            ${j.photo ? `<img src="${j.photo}" class="mt-2 h-20 rounded-lg border object-cover">` : ''}
-          </div>
-        `).join('');
-
-        card.innerHTML = `
-          <div class="flex justify-between items-start">
-            <div>
-              <h3 class="font-bold text-base"><button type="button" data-customer-profile class="text-left hover:text-sky-600 dark:hover:text-sky-400 hover:underline">${cust.name}</button></h3>
-              <p class="text-xs text-gray-500 dark:text-gray-400">${cust.address}</p>
-              <p class="text-xs text-sky-600 dark:text-sky-400 font-medium">${cust.phone}</p>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="px-2 py-1 bg-sky-500/10 text-sky-500 rounded text-xs font-bold">${cust.refrigerant || 'R-410A'}</span>
-              <button type="button" data-customer-profile class="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline">Edit</button>
-            </div>
-          </div>
-
-          <div class="p-2 bg-slate-100 dark:bg-slate-700/30 rounded-lg text-xs">
-            <span class="font-semibold text-gray-500">Equipment:</span> ${cust.equipment || 'Standard System'}
-          </div>
-
-          <div class="space-y-2 pt-2 border-t border-gray-100 dark:border-slate-700">
-            <div class="flex justify-between items-center">
-              <span class="text-xs font-bold text-gray-400 uppercase">Jobs (${custJobs.length})</span>
-            </div>
-            ${jobsHtml || '<p class="text-xs text-gray-400 italic">No job work orders on file</p>'}
-          </div>
+      filteredJobs.forEach(job => {
+        const customer = customers.find(item => item.id === job.customerId);
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-50 dark:hover:bg-slate-700/30';
+        tr.innerHTML = `
+          <td class="px-4 py-3">
+            <button type="button" data-job-profile class="text-left font-semibold text-sky-700 dark:text-sky-300 hover:underline">${job.title || 'Untitled job'}</button>
+            ${job.serialTag ? `<span class="block mt-1 text-[11px] text-gray-400 font-mono">${job.serialTag}</span>` : ''}
+          </td>
+          <td class="px-4 py-3 text-sm">${customer ? `<button type="button" data-customer-profile class="text-left hover:text-sky-600 dark:hover:text-sky-400 hover:underline">${customer.name}</button>` : 'Unknown customer'}</td>
+          <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-medium ${job.status === 'Completed' ? 'bg-emerald-500/15 text-emerald-600' : job.status === 'In Progress' ? 'bg-orange-500/15 text-orange-600' : 'bg-sky-500/15 text-sky-600'}">${job.status || 'Scheduled'}</span></td>
+          <td class="px-4 py-3 text-xs">${getTechnicianLabel(job.assignedTechId)}</td>
+          <td class="px-4 py-3 text-xs text-gray-500">${job.date && Number.isFinite(new Date(job.date).getTime()) ? new Date(job.date).toLocaleDateString() : '—'}</td>
+          <td class="px-4 py-3 text-right"><button type="button" data-job-profile class="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:underline">View / Edit</button></td>
         `;
-        card.querySelectorAll('[data-customer-profile]').forEach(button => {
-          button.addEventListener('click', () => openEditCustomerModal(cust.id));
-        });
-        card.querySelectorAll('[data-job-index]').forEach(button => {
-          button.addEventListener('click', () => openEditJobModal(custJobs[Number(button.dataset.jobIndex)].id));
-        });
-        container.appendChild(card);
+        tr.querySelectorAll('[data-job-profile]').forEach(button => button.addEventListener('click', () => openEditJobModal(job.id)));
+        tr.querySelector('[data-customer-profile]')?.addEventListener('click', () => openEditCustomerModal(customer.id));
+        tbody.appendChild(tr);
       });
+    }
+
+    function exportJobsCSV() {
+      const query = (document.getElementById('jobSearchInput').value || '').trim().toLowerCase();
+      const customerId = document.getElementById('jobCustomerFilter').value || 'all';
+      const exportJobs = jobs.filter(job => {
+        const customer = customers.find(item => item.id === job.customerId);
+        const searchable = [job.title, job.status, job.serialTag, job.notes, customer?.name, customer?.address, getTechnicianLabel(job.assignedTechId)];
+        return (customerId === 'all' || job.customerId === customerId) && searchable.some(value => (value || '').toLowerCase().includes(query));
+      });
+      if (exportJobs.length === 0) {
+        alert('No jobs match the current filters to export.');
+        return;
+      }
+
+      const escapeCsv = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
+      const rows = [
+        ['Job ID', 'Title', 'Customer', 'Customer Address', 'Status', 'Technician', 'Serial / Model', 'Date', 'Notes'],
+        ...exportJobs.map(job => {
+          const customer = customers.find(item => item.id === job.customerId);
+          return [job.id, job.title, customer?.name, customer?.address, job.status, getTechnicianLabel(job.assignedTechId), job.serialTag, job.date, job.notes];
+        })
+      ];
+      const csv = rows.map(row => row.map(escapeCsv).join(',')).join('\r\n');
+      const link = document.createElement('a');
+      link.href = `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`;
+      link.download = `HVAC_Jobs_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
 
     function renderInvoices() {
